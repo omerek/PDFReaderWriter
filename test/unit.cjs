@@ -86,7 +86,7 @@ async function t(name, fn) {
   const textedit = require('../src/main/textedit');
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const textItems = async (b) => {
-    const d = await pdfjs.getDocument({ data: b.slice(), verbosity: 0, standardFontDataUrl: path.join(__dirname, '..', 'node_modules', 'pdfjs-dist', 'standard_fonts') + path.sep }).promise;
+    const d = await pdfjs.getDocument({ data: b.slice(), verbosity: 0, standardFontDataUrl: `${path.join(__dirname, '..', 'node_modules', 'pdfjs-dist', 'standard_fonts').replace(/\\/g, '/')}/` }).promise;
     return (await (await d.getPage(1)).getTextContent()).items.filter((i) => i.str.trim());
   };
   await t('parseContent: strings, arrays, inline images', async () => {
