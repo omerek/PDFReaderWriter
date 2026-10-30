@@ -1,6 +1,6 @@
 # Katip PDF
 
-Windows 10 ve 11 (32 bit x86 ve 64 bit x64) için PDF okuyucu ve düzenleyici.
+Windows 10 ve 11 (32 bit x86 ve 64 bit x64) ve Android (7.0 ve üzeri) için PDF okuyucu ve düzenleyici.
 
 ## İndirme
 
@@ -12,12 +12,31 @@ Hazır kurulum dosyaları her `main` güncellemesinde GitHub Actions ile derleni
 | `KatipPDF-Kurulum-<sürüm>-x64.exe` | 64 bit Windows 10/11 kurulumu (çoğu bilgisayar) |
 | `KatipPDF-Kurulum-<sürüm>-ia32.exe` | 32 bit (x86) Windows 10 kurulumu |
 | `KatipPDF-Tasinabilir-<sürüm>-x64.exe` / `-ia32.exe` | Kurulum gerektirmeyen taşınabilir sürüm |
+| `KatipPDF-Android-<sürüm>.apk` | Android telefon ve tabletler (Play Store gerekmez) |
 
 Kurulum, PDF dosyalarını Katip PDF ile ilişkilendirir; Windows'ta varsayılan PDF uygulaması
 olarak seçmek için **Ayarlar → Uygulamalar → Varsayılan uygulamalar → .pdf** yolunu kullanın.
 
 > Kurulum dosyası kod imzalı olmadığı için Windows SmartScreen ilk açılışta uyarı gösterebilir:
 > **Ek bilgi → Yine de çalıştır** ile devam edebilirsiniz.
+
+### Android'e kurulum
+
+1. Telefonda [Releases](../../releases) sayfasını açıp `KatipPDF-Android-<sürüm>.apk` dosyasını indirin.
+2. İndirilen dosyaya dokunun. Android ilk seferde tarayıcıya veya dosya yöneticisine
+   **Bilinmeyen uygulamaları yükleme** izni vermenizi ister; izni verip **Yükle**'ye dokunun.
+3. Yeni sürümleri aynı şekilde indirip kurmanız yeterlidir; belgeleriniz ve ayarlarınız korunur.
+
+Android sürümü masaüstüyle aynı özelliklere sahiptir; dokunmatik ekrana göre uyarlanmıştır:
+- Sağ tık yerine **uzun basma** menüsü (sayfa, küçük resim, Sayfaları Düzenle ekranı)
+- Metne uzun basıp seçince alttaki çubukta **Kopyala, Vurgula, Altını çiz, Üstünü çiz, Diğer…**
+- **İki parmakla yakınlaştırma**, çift dokunarak yakınlaştırma / genişliğe sığdırma
+- Masaüstü menü çubuğunun yerine sağ üstteki **⋮** menüsü
+- Dosyalar Android dosya seçicisiyle açılır ve kaydedilir (telefon, SD kart, Google Drive vb.);
+  başka uygulamalardan "Birlikte aç" veya "Paylaş" ile PDF açılabilir
+- **Paylaş** düğmesi, Android yazdırma hizmetiyle yazdırma (PDF olarak kaydetme dahil)
+- Sayfaları Düzenle'de dokunarak çoklu seçim ve menüden **Taşı… / Başa taşı / Sona taşı**
+- Geri tuşu açık menüyü, pencereyi, aracı veya belgeyi kapatır
 
 ## Özellikler
 
@@ -81,6 +100,20 @@ npm run dist         # dist/ klasörüne x64 ve x86 kurulum + taşınabilir sür
 Windows kurulum dosyaları en sorunsuz Windows üzerinde derlenir (GitHub Actions da
 `windows-latest` kullanır). Linux/macOS'ta derlemek için Wine gerekir.
 
+Android sürümü ([Capacitor](https://capacitorjs.com) ile) için ayrıca JDK 21 ve Android SDK gerekir:
+
+```bash
+npm run build:android-web      # android-web/ klasörüne web paketini hazırlar
+npm run test:android-web       # telefon emülasyonlu Chromium'da arayüz testi
+npx cap sync android           # web paketini Android projesine kopyalar
+cd android && ./gradlew assembleRelease
+```
+
+APK'nın güncellemelerde kurulabilmesi için her sürüm aynı anahtarla imzalanmalıdır. CI, imza
+anahtarını `KATIP_KEYSTORE_B64` (base64 .jks) ve `KATIP_KEYSTORE_PASSWORD` depo sırlarından alır
+(takma ad `katip`); bu sırlar tanımlı değilse ilk derlemede bir anahtar üretip GitHub Actions
+önbelleğinde saklar.
+
 Test PDF'lerini yeniden üretmek için: `pip install reportlab && npm run fixtures`.
 
 ## Mimari
@@ -88,6 +121,7 @@ Test PDF'lerini yeniden üretmek için: `pip install reportlab && npm run fixtur
 | Katman | Teknoloji | Lisans |
 | --- | --- | --- |
 | Masaüstü kabuğu | Electron 43 (Windows x86/x64 destekleyen son ana sürüm) | MIT |
+| Android kabuğu | Capacitor 8 (Android System WebView) | MIT |
 | Görüntüleme, arama, açıklama düzenleyicileri, form doldurma | PDF.js 6 | Apache 2.0 |
 | Sayfa işlemleri, birleştirme, bölme, notlar, Türkçe görünüm düzeltmesi | pdf-lib + fontkit | MIT |
 | Unicode yazı tipi | DejaVu Sans | Bitstream Vera (serbest) |
@@ -101,7 +135,13 @@ src/preload/    Güvenli köprü (contextIsolation + sandbox)
 src/renderer/   Arayüz: app.js (görüntüleyici, araçlar, kaydetme), sidebar.js,
                 organizer.js (sayfa düzenleme), textedit-ui.js, contextmenu.js,
                 signature.js, dialogs.js
-test/           unit.cjs (pdf-lib işlemleri), e2e.cjs (gerçek uygulama üzerinde arayüz testi)
+src/mobile/     Android: android.js (window.katip'in Capacitor ile karşılığı), mobile-ui.js
+                (dokunmatik menüler, yakınlaştırma, geri tuşu), pdfops-worker.js (pdfops.js'i
+                web worker içinde çalıştırır), mobile.css
+android/        Capacitor Android projesi; KatipFilesPlugin.java dosya seçici, kaydetme,
+                paylaşma ve yazdırma
+test/           unit.cjs (pdf-lib işlemleri), e2e.cjs (gerçek uygulama üzerinde arayüz testi),
+                android-web.cjs (Android arayüzü, telefon emülasyonu)
 ```
 
 Açıklamalar PDF içine standart PDF açıklamaları (Highlight, Ink, FreeText, Stamp, Text)

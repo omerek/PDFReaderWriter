@@ -1,8 +1,8 @@
 {
   "name": "katip-pdf",
   "productName": "Katip PDF",
-  "version": "1.1.0",
-  "description": "Katip PDF - Windows için PDF okuyucu ve düzenleyici",
+  "version": "1.2.0",
+  "description": "Katip PDF - Windows ve Android için PDF okuyucu ve düzenleyici",
   "main": "src/main/main.js",
   "author": "Ömer",
   "license": "MIT",
@@ -15,7 +15,10 @@
     "fixtures": "python3 test/make-fixtures.py",
     "dist": "electron-builder --win --x64 --publish never && electron-builder --win --ia32 --publish never",
     "dist:x64": "electron-builder --win --x64 --publish never",
-    "dist:ia32": "electron-builder --win --ia32 --publish never"
+    "dist:ia32": "electron-builder --win --ia32 --publish never",
+    "build:android-web": "node scripts/build-android-web.cjs",
+    "test:android-web": "node test/android-web.cjs",
+    "android:sync": "node scripts/build-android-web.cjs && cap sync android"
   },
   "dependencies": {
     "@pdf-lib/fontkit": "1.1.1",
@@ -23,8 +26,13 @@
     "pdfjs-dist": "6.4.299"
   },
   "devDependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/cli": "8.6.0",
+    "@capacitor/core": "8.6.0",
     "electron": "43.8.4",
     "electron-builder": "26.18.0",
+    "esbuild": "0.28.2",
     "playwright-core": "1.63.0",
     "resedit": "3.1.0"
   },
@@ -39,6 +47,7 @@
     },
     "files": [
       "src/**/*",
+      "!src/mobile/**",
       "build/icon.png",
       "package.json",
       "!**/*.map",

@@ -421,12 +421,25 @@ function pageContent(page) {
   const streams = contents instanceof PDFArray
     ? contents.asArray().map((r) => context.lookup(r))
     : contents ? [contents] : [];
-  return streams.map((s) => Buffer.from(streamBytes(s)).toString('latin1')).join('\n');
+  return streams.map((s) => latin1Decode(streamBytes(s))).join('\n');
+}
+
+// Byte <-> latin1 string helpers (no Buffer, so this module also runs in a browser worker on Android).
+function latin1Decode(bytes) {
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) out += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return out;
+}
+
+function latin1Encode(str) {
+  const out = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) out[i] = str.charCodeAt(i) & 0xff;
+  return out;
 }
 
 function setPageContent(page, latin1) {
   const { context } = page.doc;
-  const stream = context.flateStream(Buffer.from(latin1, 'latin1'));
+  const stream = context.flateStream(latin1Encode(latin1));
   const ref = context.register(stream);
   page.node.set(PDFName.of('Contents'), context.obj([ref]));
 }

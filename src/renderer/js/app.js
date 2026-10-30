@@ -389,6 +389,11 @@ async function save({ saveAs = false } = {}) {
     toast('Kaydedildi');
     return true;
   } catch (err) {
+    // Android: a file opened from another app may be read-only; save a copy instead.
+    if (err?.code === 'READ_ONLY' && !saveAs) {
+      toast('Bu dosyaya yazma izni yok, lütfen bir kopya olarak kaydedin.');
+      return save({ saveAs: true });
+    }
     toast(`Kaydedilemedi: ${cleanError(err)}`, { error: true });
     return false;
   }
@@ -766,6 +771,16 @@ async function renderPageToCanvas(pageIndex, { scale = 1, maxWidth, maxHeight, p
 
 async function printDocument() {
   if (!state.pdfDoc) return;
+  if (api.printPdf) {
+    // Android: hand the PDF itself to the system print service.
+    try {
+      const bytes = await busy('Yazdırma hazırlanıyor…', getCurrentBytes);
+      await api.printPdf(bytes, state.fileName);
+    } catch (err) {
+      toast(`Yazdırılamadı: ${cleanError(err)}`, { error: true });
+    }
+    return;
+  }
   const doc = state.pdfDoc;
   const pc = $('#printContainer');
   pc.replaceChildren();
@@ -846,6 +861,11 @@ const commands = {
   saveAs: () => save({ saveAs: true }),
   close: () => closeDocument(),
   print: () => printDocument(),
+  share: async () => {
+    if (!state.pdfDoc || !api.share) return;
+    const bytes = await busy('Hazırlanıyor…', getCurrentBytes);
+    await api.share(bytes, state.fileName);
+  },
   properties: () => state.pdfDoc && dialogs.properties(ctx),
   preferences: async () => {
     const res = await dialogs.preferences(ctx);

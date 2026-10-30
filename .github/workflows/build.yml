@@ -1,4 +1,4 @@
-name: Windows derlemesi
+name: Derleme (Windows ve Android)
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  windows:
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
@@ -52,24 +52,138 @@ jobs:
             dist/*.exe
           if-no-files-found: error
 
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Bağımlılıkları kur
+        run: npm ci
+
+      - name: Web paketini hazırla
+        run: npm run build:android-web
+
+      - name: Mobil arayüz testleri (telefon emülasyonu)
+        run: npm run test:android-web
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+          KATIP_SHOTS: ${{ runner.temp }}/android-shots
+
+      - name: Test ekran görüntüleri
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-ekran-goruntuleri
+          path: ${{ runner.temp }}/android-shots
+          if-no-files-found: ignore
+
+      - name: Android projesini eşitle
+        run: npx cap sync android
+
+      # The APK must always be signed with the same key, or Android refuses to install a new
+      # version over an old one. Preferred: the KATIP_KEYSTORE_B64 / KATIP_KEYSTORE_PASSWORD
+      # repository secrets. Without them a key is generated once and kept in the Actions cache.
+      - name: İmza anahtarını önbellekten al
+        id: keycache
+        uses: actions/cache@v4
+        with:
+          path: ~/.katip-signing
+          key: katip-android-signing-v1
+
+      - name: İmza anahtarını hazırla
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.KATIP_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KATIP_KEYSTORE_PASSWORD }}
+        run: |
+          DIR="$HOME/.katip-signing"
+          mkdir -p "$DIR"
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/katip.jks"
+            echo "KATIP_KEYSTORE_FILE=$RUNNER_TEMP/katip.jks" >> "$GITHUB_ENV"
+            echo "::add-mask::$KEYSTORE_PASSWORD"
+            echo "KATIP_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          if [ ! -f "$DIR/katip.jks" ]; then
+            openssl rand -hex 24 > "$DIR/password"
+            keytool -genkeypair -keystore "$DIR/katip.jks" -alias katip -keyalg RSA -keysize 4096 -validity 36500 \
+              -storepass "$(cat "$DIR/password")" -keypass "$(cat "$DIR/password")" -dname "CN=Katip PDF, O=Katip PDF, C=TR"
+          fi
+          echo "::add-mask::$(cat "$DIR/password")"
+          echo "KATIP_KEYSTORE_FILE=$DIR/katip.jks" >> "$GITHUB_ENV"
+          echo "KATIP_KEYSTORE_PASSWORD=$(cat "$DIR/password")" >> "$GITHUB_ENV"
+
+      - name: APK derle
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: APK'yı doğrula ve adlandır
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          mkdir -p dist-android
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs "$APK"
+          cp "$APK" "dist-android/KatipPDF-Android-$VERSION.apk"
+          ls -la dist-android
+
+      - name: Derleme çıktısı
+        uses: actions/upload-artifact@v4
+        with:
+          name: KatipPDF-Android
+          path: dist-android/*.apk
+          if-no-files-found: error
+
+  release:
+    if: github.event_name == 'push'
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          pattern: KatipPDF-*
+          merge-multiple: true
+
       - name: GitHub sürümü yayınla
-        if: github.event_name == 'push'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
           TAG="v$VERSION"
-          NOTES="Katip PDF $VERSION - Windows 10/11 için PDF okuyucu ve düzenleyici.
+          NOTES="Katip PDF $VERSION - Windows 10/11 ve Android için PDF okuyucu ve düzenleyici.
 
+          Windows:
           - KatipPDF-Kurulum-$VERSION-x64.exe: 64 bit Windows için kurulum
           - KatipPDF-Kurulum-$VERSION-ia32.exe: 32 bit (x86) Windows için kurulum
           - KatipPDF-Tasinabilir-*.exe: kurulum gerektirmeyen taşınabilir sürüm
 
+          Android (7.0 ve üzeri):
+          - KatipPDF-Android-$VERSION.apk: telefona indirip açarak kurun. İlk kurulumda Android,
+            tarayıcıya veya dosya yöneticisine \"bilinmeyen uygulamaları yükleme\" izni vermenizi isteyebilir.
+
           Derleme: ${GITHUB_SHA::7}"
+          ls -la out
           if gh release view "$TAG" > /dev/null 2>&1; then
-            gh release upload "$TAG" dist/*.exe --clobber
+            gh release upload "$TAG" out/* --clobber
             gh release edit "$TAG" --notes "$NOTES"
           else
-            gh release create "$TAG" dist/*.exe --title "Katip PDF $VERSION" --notes "$NOTES" --target "$GITHUB_SHA"
+            gh release create "$TAG" out/* --title "Katip PDF $VERSION" --notes "$NOTES" --target "$GITHUB_SHA"
           fi
