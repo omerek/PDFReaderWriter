@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' data: blob:">
+  <title>Katip PDF</title>
+  <link rel="stylesheet" href="../../node_modules/pdfjs-dist/web/pdf_viewer.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-open" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1H7.5a2 2 0 0 0-1.9 1.4L3 19V7z"/><path d="M3 19l2.6-7.6A2 2 0 0 1 7.5 10H22l-2.8 8.1a1.3 1.3 0 0 1-1.2.9H3z"/></symbol>
+      <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3h11l4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a1 1 0 0 1 1-1z"/><path d="M8 3v5h7V3"/><rect x="7" y="13" width="10" height="6" rx="1"/></symbol>
+      <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></symbol>
+      <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></symbol>
+      <symbol id="i-prev" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+      <symbol id="i-next" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+      <symbol id="i-minus" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M16 16l5 5"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M11 8v6M16 16l5 5"/></symbol>
+      <symbol id="i-fitw" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 12h10M7 12l2-2M7 12l2 2M17 12l-2-2M17 12l-2 2"/></symbol>
+      <symbol id="i-fitp" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M12 7v10M12 7l-2 2M12 7l2 2M12 17l-2-2M12 17l2-2"/></symbol>
+      <symbol id="i-rotcw" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></symbol>
+      <symbol id="i-rotccw" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v5h5"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16 16l5 5"/></symbol>
+      <symbol id="i-cursor" viewBox="0 0 24 24"><path d="M9 4h6M9 20h6M12 4v16"/></symbol>
+      <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11V4.5a1.5 1.5 0 0 1 3 0V12M14 11V6.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-.5a6 6 0 0 1-4.6-2.2L3.6 15.6a1.5 1.5 0 0 1 2.2-2L8 15.5"/></symbol>
+      <symbol id="i-highlight" viewBox="0 0 24 24"><path d="M15 4l5 5-8.5 8.5-5-5L15 4z"/><path d="M6.5 12.5L4 18l2 2 5.5-2.5"/><path d="M3 22h18" stroke-width="3" class="accent-stroke"/></symbol>
+      <symbol id="i-text" viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></symbol>
+      <symbol id="i-draw" viewBox="0 0 24 24"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1z"/><path d="M14.5 6.5l3 3"/></symbol>
+      <symbol id="i-note" viewBox="0 0 24 24"><path d="M5 4h14a1 1 0 0 1 1 1v10l-5 5H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M15 20v-5h5M8 9h8M8 13h5"/></symbol>
+      <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
+      <symbol id="i-sign" viewBox="0 0 24 24"><path d="M3 17c3-6 5-9 6-8s-3 8-1 9 4-6 5-5-1 4 1 4 3-2 4-3"/><path d="M3 21h18"/></symbol>
+      <symbol id="i-pages" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="9" rx="1"/><rect x="3" y="15" width="7" height="6" rx="1"/><rect x="14" y="15" width="7" height="6" rx="1"/></symbol>
+      <symbol id="i-thumbs" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="8" rx="1"/><rect x="5" y="13" width="14" height="8" rx="1"/></symbol>
+      <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-5-6 5V3z"/></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+      <symbol id="i-paperclip" viewBox="0 0 24 24"><path d="M21 11.5l-8.5 8.5a5 5 0 0 1-7-7L14 4.5a3.5 3.5 0 0 1 5 5L10.5 18a2 2 0 0 1-3-3L15 7.5"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+      <symbol id="i-extract" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M12 11v6M9 14l3 3 3-3"/></symbol>
+      <symbol id="i-blank" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M12 11v6M9 14h6"/></symbol>
+      <symbol id="i-insert" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6M9 15h6M12 12l3 3-3 3"/></symbol>
+      <symbol id="i-split" viewBox="0 0 24 24"><path d="M6 4v16M18 4v16M3 12h6M15 12h6M9 12l-2-2M9 12l-2 2M15 12l2-2M15 12l2 2"/></symbol>
+      <symbol id="i-merge" viewBox="0 0 24 24"><path d="M4 4l8 8 8-8M12 12v8"/></symbol>
+      <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></symbol>
+      <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+      <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+      <symbol id="i-logo" viewBox="0 0 48 48"><path d="M12 4h17l11 11v27a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="currentColor" stroke="none"/><path d="M29 4v9a2 2 0 0 0 2 2h9" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="2"/><path d="M17 34c4-9 7-14 8-13s-4 11-2 12 4-6 6-5-1 4 1 4 3-1 4-2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    </defs>
+  </svg>
+
+  <header id="toolbar" role="toolbar" aria-label="Ana araç çubuğu">
+    <div class="tb-group">
+      <button class="tb" data-cmd="toggleSidebar" title="Kenar çubuğu (F4)"><svg><use href="#i-sidebar"/></svg></button>
+      <button class="tb" data-cmd="open" title="Aç (Ctrl+O)"><svg><use href="#i-open"/></svg></button>
+      <button class="tb doc-only" data-cmd="save" title="Kaydet (Ctrl+S)"><svg><use href="#i-save"/></svg></button>
+      <button class="tb doc-only" data-cmd="print" title="Yazdır (Ctrl+P)"><svg><use href="#i-print"/></svg></button>
+    </div>
+    <div class="tb-sep doc-only"></div>
+    <div class="tb-group doc-only">
+      <button class="tb" data-cmd="undo" id="btnUndo" title="Geri al (Ctrl+Z)"><svg><use href="#i-undo"/></svg></button>
+      <button class="tb" data-cmd="redo" id="btnRedo" title="Yinele (Ctrl+Y)"><svg><use href="#i-redo"/></svg></button>
+    </div>
+    <div class="tb-sep doc-only"></div>
+    <div class="tb-group doc-only" id="toolGroup">
+      <button class="tb tool" data-tool="select" title="Metin seçimi (V)"><svg><use href="#i-cursor"/></svg></button>
+      <button class="tb tool" data-tool="hand" title="El aracı (H)"><svg><use href="#i-hand"/></svg></button>
+      <button class="tb tool" data-tool="highlight" title="Vurgula (U)"><svg><use href="#i-highlight"/></svg></button>
+      <button class="tb tool" data-tool="text" title="Metin ekle (T)"><svg><use href="#i-text"/></svg></button>
+      <button class="tb tool" data-tool="draw" title="Serbest çizim (D)"><svg><use href="#i-draw"/></svg></button>
+      <button class="tb tool" data-tool="note" title="Yapışkan not (N)"><svg><use href="#i-note"/></svg></button>
+      <button class="tb" data-cmd="toolImage" title="Resim ekle"><svg><use href="#i-image"/></svg></button>
+      <button class="tb" data-cmd="toolSign" title="İmzala"><svg><use href="#i-sign"/></svg></button>
+      <button class="tb" data-cmd="organize" title="Sayfaları düzenle"><svg><use href="#i-pages"/></svg></button>
+    </div>
+    <div class="tb-spacer"></div>
+    <div class="tb-group doc-only">
+      <button class="tb" data-cmd="prevPage" title="Önceki sayfa"><svg><use href="#i-prev"/></svg></button>
+      <input id="pageInput" class="tb-input" type="text" inputmode="numeric" aria-label="Sayfa numarası" value="1">
+      <span class="tb-label" id="pageCount">/ 0</span>
+      <button class="tb" data-cmd="nextPage" title="Sonraki sayfa"><svg><use href="#i-next"/></svg></button>
+    </div>
+    <div class="tb-sep doc-only"></div>
+    <div class="tb-group doc-only">
+      <button class="tb" data-cmd="zoomOut" title="Uzaklaştır (Ctrl+-)"><svg><use href="#i-minus"/></svg></button>
+      <select id="zoomSelect" class="tb-select" aria-label="Yakınlaştırma">
+        <option value="auto">Otomatik</option>
+        <option value="page-fit">Sayfaya sığdır</option>
+        <option value="page-width">Genişliğe sığdır</option>
+        <option value="page-actual">Gerçek boyut</option>
+        <option value="0.5">%50</option>
+        <option value="0.75">%75</option>
+        <option value="1">%100</option>
+        <option value="1.25">%125</option>
+        <option value="1.5">%150</option>
+        <option value="2">%200</option>
+        <option value="3">%300</option>
+        <option value="4">%400</option>
+        <option value="custom" id="zoomCustom" hidden disabled>%100</option>
+      </select>
+      <button class="tb" data-cmd="zoomIn" title="Yakınlaştır (Ctrl+=)"><svg><use href="#i-plus"/></svg></button>
+      <button class="tb" data-cmd="fitWidth" title="Genişliğe sığdır"><svg><use href="#i-fitw"/></svg></button>
+      <button class="tb" data-cmd="fitPage" title="Sayfaya sığdır"><svg><use href="#i-fitp"/></svg></button>
+      <button class="tb" data-cmd="rotateViewCw" title="Görünümü döndür"><svg><use href="#i-rotcw"/></svg></button>
+    </div>
+    <div class="tb-sep doc-only"></div>
+    <div class="tb-group doc-only">
+      <button class="tb" data-cmd="find" title="Bul (Ctrl+F)"><svg><use href="#i-search"/></svg></button>
+      <button class="tb" data-cmd="presentation" title="Tam ekran okuma (Ctrl+L)"><svg><use href="#i-expand"/></svg></button>
+      <button class="tb" data-cmd="properties" title="Belge özellikleri"><svg><use href="#i-info"/></svg></button>
+    </div>
+  </header>
+
+  <div id="toolOptions" class="tool-options" hidden>
+    <span class="to-title" id="toolOptionsTitle"></span>
+    <div class="to-field" data-for="color">
+      <span>Renk</span>
+      <div class="swatches" id="swatches"></div>
+    </div>
+    <label class="to-field" data-for="thickness"><span>Kalınlık</span><input type="range" id="optThickness" min="1" max="20" value="3"><output id="optThicknessOut">3</output></label>
+    <label class="to-field" data-for="opacity"><span>Opaklık</span><input type="range" id="optOpacity" min="10" max="100" value="100"><output id="optOpacityOut">%100</output></label>
+    <label class="to-field" data-for="fontsize"><span>Yazı boyutu</span><input type="number" id="optFontSize" min="5" max="100" value="14"></label>
+    <span class="to-hint" id="toolHint"></span>
+  </div>
+
+  <div id="main">
+    <aside id="sidebar" class="hidden">
+      <div class="sb-tabs" role="tablist">
+        <button class="sb-tab active" data-panel="thumbs" title="Sayfa küçük resimleri"><svg><use href="#i-thumbs"/></svg></button>
+        <button class="sb-tab" data-panel="outline" title="Yer imleri"><svg><use href="#i-bookmark"/></svg></button>
+        <button class="sb-tab" data-panel="annots" title="Açıklamalar"><svg><use href="#i-list"/></svg></button>
+        <button class="sb-tab" data-panel="attach" title="Ekler"><svg><use href="#i-paperclip"/></svg></button>
+      </div>
+      <div class="sb-panel active" id="panel-thumbs"><div id="thumbs"></div></div>
+      <div class="sb-panel" id="panel-outline"><div class="sb-heading">Yer İmleri</div><div id="outline" class="tree"></div></div>
+      <div class="sb-panel" id="panel-annots"><div class="sb-heading">Açıklamalar</div><div id="annotList"></div></div>
+      <div class="sb-panel" id="panel-attach"><div class="sb-heading">Ekler</div><div id="attachList"></div></div>
+      <div id="sidebarResizer" title="Boyutlandır"></div>
+    </aside>
+
+    <section id="viewerArea">
+      <div id="viewerContainer" tabindex="0">
+        <div id="viewer" class="pdfViewer"></div>
+      </div>
+
+      <div id="findbar" hidden>
+        <input id="findInput" type="search" placeholder="Belgede bul" aria-label="Belgede bul">
+        <span id="findResult" class="find-result"></span>
+        <button class="tb small" id="findPrev" title="Önceki (Shift+F3)"><svg><use href="#i-prev"/></svg></button>
+        <button class="tb small" id="findNext" title="Sonraki (F3)"><svg><use href="#i-next"/></svg></button>
+        <label class="chk"><input type="checkbox" id="findCase"> Aa</label>
+        <label class="chk" title="Tam sözcük"><input type="checkbox" id="findWord"> Sözcük</label>
+        <label class="chk" title="Tümünü vurgula"><input type="checkbox" id="findAll" checked> Tümü</label>
+        <button class="tb small" id="findClose" title="Kapat (Esc)"><svg><use href="#i-close"/></svg></button>
+      </div>
+
+      <div id="welcome">
+        <div class="welcome-card">
+          <svg class="logo"><use href="#i-logo"/></svg>
+          <h1>Katip PDF</h1>
+          <p class="muted">PDF okuyun, açıklama ekleyin, imzalayın ve sayfaları düzenleyin.</p>
+          <div class="welcome-actions">
+            <button class="btn primary" data-cmd="open"><svg><use href="#i-open"/></svg> Dosya aç</button>
+            <button class="btn" data-cmd="merge"><svg><use href="#i-merge"/></svg> Dosyaları birleştir</button>
+            <button class="btn" data-cmd="imagesToPdf"><svg><use href="#i-image"/></svg> Resimlerden PDF</button>
+          </div>
+          <p class="muted small">veya bir PDF dosyasını bu pencereye sürükleyip bırakın</p>
+          <div id="recentList"></div>
+        </div>
+      </div>
+
+      <div id="placeOverlay" hidden></div>
+    </section>
+  </div>
+
+  <section id="organizer" hidden>
+    <div class="org-toolbar">
+      <strong>Sayfaları Düzenle</strong>
+      <span class="muted" id="orgSel">0 sayfa seçili</span>
+      <div class="tb-sep"></div>
+      <button class="tb" data-org="rotateCcw" title="Sola döndür"><svg><use href="#i-rotccw"/></svg></button>
+      <button class="tb" data-org="rotateCw" title="Sağa döndür"><svg><use href="#i-rotcw"/></svg></button>
+      <button class="tb" data-org="delete" title="Sil (Delete)"><svg><use href="#i-trash"/></svg></button>
+      <button class="tb" data-org="duplicate" title="Çoğalt"><svg><use href="#i-copy"/></svg></button>
+      <button class="tb" data-org="extract" title="Seçili sayfaları yeni PDF olarak ayıkla"><svg><use href="#i-extract"/></svg></button>
+      <div class="tb-sep"></div>
+      <button class="tb" data-org="insertBlank" title="Boş sayfa ekle"><svg><use href="#i-blank"/></svg></button>
+      <button class="tb" data-org="insertFile" title="Dosyadan sayfa ekle"><svg><use href="#i-insert"/></svg></button>
+      <button class="tb" data-org="split" title="Belgeyi böl"><svg><use href="#i-split"/></svg></button>
+      <button class="tb" data-org="selectAll" title="Tümünü seç (Ctrl+A)"><svg><use href="#i-check"/></svg></button>
+      <div class="tb-spacer"></div>
+      <label class="muted small">Boyut <input type="range" id="orgZoom" min="100" max="320" value="160"></label>
+      <button class="btn primary" data-org="close">Kapat</button>
+    </div>
+    <div id="orgGrid" tabindex="0"></div>
+  </section>
+
+  <div id="statusbar">
+    <span id="statusFile"></span>
+    <span class="tb-spacer"></span>
+    <span id="statusInfo"></span>
+  </div>
+
+  <div id="dropHint" hidden><div>PDF dosyasını bırakın</div></div>
+  <div id="toasts" aria-live="polite"></div>
+  <div id="busy" hidden><div class="spinner"></div><div id="busyText">İşleniyor…</div></div>
+  <div id="printContainer"></div>
+
+  <dialog id="dialog">
+    <form method="dialog" id="dialogForm">
+      <h2 id="dialogTitle"></h2>
+      <div id="dialogBody"></div>
+      <div class="dialog-buttons" id="dialogButtons"></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
