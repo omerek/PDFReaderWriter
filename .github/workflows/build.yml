@@ -1,0 +1,75 @@
+name: Windows derlemesi
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Bağımlılıkları kur
+        run: npm ci
+
+      - name: Birim testleri
+        run: npm run test:unit
+
+      - name: Uçtan uca arayüz testleri
+        run: npm run test:e2e
+        env:
+          KATIP_SHOTS: ${{ runner.temp }}\shots
+
+      - name: Test ekran görüntüleri
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-ekran-goruntuleri
+          path: ${{ runner.temp }}\shots
+          if-no-files-found: ignore
+
+      - name: Kurulum dosyalarını derle (x64 ve x86)
+        run: npm run dist
+
+      - name: Derleme çıktıları
+        uses: actions/upload-artifact@v4
+        with:
+          name: KatipPDF-Windows
+          path: |
+            dist/*.exe
+          if-no-files-found: error
+
+      - name: GitHub sürümü yayınla
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          NOTES="Katip PDF $VERSION - Windows 10/11 için PDF okuyucu ve düzenleyici.
+
+          - KatipPDF-Kurulum-$VERSION-x64.exe: 64 bit Windows için kurulum
+          - KatipPDF-Kurulum-$VERSION-ia32.exe: 32 bit (x86) Windows için kurulum
+          - KatipPDF-Tasinabilir-*.exe: kurulum gerektirmeyen taşınabilir sürüm
+
+          Derleme: ${GITHUB_SHA::7}"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" dist/*.exe --clobber
+            gh release edit "$TAG" --notes "$NOTES"
+          else
+            gh release create "$TAG" dist/*.exe --title "Katip PDF $VERSION" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi

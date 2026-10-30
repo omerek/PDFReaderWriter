@@ -1,0 +1,107 @@
+{
+  "name": "katip-pdf",
+  "productName": "Katip PDF",
+  "version": "1.0.0",
+  "description": "Katip PDF - Windows için PDF okuyucu ve düzenleyici",
+  "main": "src/main/main.js",
+  "author": "Ömer",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/unit.cjs && node test/e2e.cjs",
+    "test:unit": "node test/unit.cjs",
+    "test:e2e": "node test/e2e.cjs",
+    "fixtures": "python3 test/make-fixtures.py",
+    "dist": "electron-builder --win --x64 --publish never && electron-builder --win --ia32 --publish never",
+    "dist:x64": "electron-builder --win --x64 --publish never",
+    "dist:ia32": "electron-builder --win --ia32 --publish never"
+  },
+  "dependencies": {
+    "@pdf-lib/fontkit": "1.1.1",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.4.299"
+  },
+  "devDependencies": {
+    "electron": "43.8.4",
+    "electron-builder": "26.18.0",
+    "playwright-core": "1.63.0",
+    "resedit": "3.1.0"
+  },
+  "homepage": "https://github.com/omerek/PDFReaderWriter",
+  "build": {
+    "appId": "com.katip.pdf",
+    "productName": "Katip PDF",
+    "copyright": "Copyright © 2026 Ömer",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "build/icon.png",
+      "package.json",
+      "!**/*.map",
+      "!node_modules/pdfjs-dist/legacy/**",
+      "!node_modules/pdfjs-dist/types/**",
+      "!node_modules/pdfjs-dist/image_decoders/**",
+      "!node_modules/pdfjs-dist/build/*.min.mjs",
+      "!node_modules/@napi-rs/**"
+    ],
+    "extraResources": [
+      {
+        "from": "THIRD_PARTY_NOTICES.txt",
+        "to": "THIRD_PARTY_NOTICES.txt"
+      }
+    ],
+    "asar": true,
+    "fileAssociations": [
+      {
+        "ext": "pdf",
+        "name": "PDF Belgesi",
+        "description": "PDF Belgesi",
+        "icon": "build/icon.ico",
+        "role": "Editor",
+        "mimeType": "application/pdf"
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis"
+        },
+        {
+          "target": "portable"
+        }
+      ],
+      "artifactName": "KatipPDF-${version}-${arch}-${target}.${ext}",
+      "signAndEditExecutable": false,
+      "requestedExecutionLevel": "asInvoker",
+      "legalTrademarks": "Katip PDF"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Katip PDF",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerLanguages": [
+        "tr_TR",
+        "en_US"
+      ],
+      "language": "1055",
+      "artifactName": "KatipPDF-Kurulum-${version}-${arch}.${ext}",
+      "deleteAppDataOnUninstall": false,
+      "license": "LICENSE.txt"
+    },
+    "portable": {
+      "artifactName": "KatipPDF-Tasinabilir-${version}-${arch}.${ext}"
+    },
+    "afterPack": "scripts/after-pack.cjs"
+  }
+}
