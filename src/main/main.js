@@ -65,6 +65,22 @@ function createWindow(filePath) {
     win.webContents.send('app:request-close');
   });
   win.on('closed', () => windows.delete(win));
+  // Cut / Copy / Paste menu for text fields (the renderer handles every other right-click).
+  win.webContents.on('context-menu', (e, params) => {
+    if (!params.isEditable) return;
+    const f = params.editFlags;
+    Menu.buildFromTemplate([
+      { label: 'Geri al', role: 'undo', enabled: f.canUndo },
+      { label: 'Yinele', role: 'redo', enabled: f.canRedo },
+      { type: 'separator' },
+      { label: 'Kes', role: 'cut', enabled: f.canCut },
+      { label: 'Kopyala', role: 'copy', enabled: f.canCopy },
+      { label: 'Yapıştır', role: 'paste', enabled: f.canPaste },
+      { label: 'Sil', role: 'delete', enabled: f.canDelete },
+      { type: 'separator' },
+      { label: 'Tümünü seç', role: 'selectAll' },
+    ]).popup({ window: win });
+  });
   const saveState = () => {
     if (win.isDestroyed() || win.isMinimized()) return;
     const maximized = win.isMaximized();
@@ -196,6 +212,25 @@ ipcMain.handle('app:confirm', async (e, opts) => {
   });
   return res.response;
 });
+
+// Native right-click menu built from a plain description sent by the renderer.
+// Resolves with the clicked item's id, or null when the menu is dismissed.
+ipcMain.handle('app:context-menu', (e, items) => new Promise((resolve) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  let chosen = null;
+  const template = (items || []).map((it) => (it.type === 'separator'
+    ? { type: 'separator' }
+    : {
+      label: it.label,
+      accelerator: it.accelerator,
+      registerAccelerator: false,
+      enabled: it.enabled !== false,
+      type: it.type === 'checkbox' ? 'checkbox' : 'normal',
+      checked: !!it.checked,
+      click: () => { chosen = it.id; },
+    }));
+  Menu.buildFromTemplate(template).popup({ window: win, callback: () => setTimeout(() => resolve(chosen), 0) });
+}));
 
 ipcMain.handle('app:print', async (e) => {
   const wc = e.sender;

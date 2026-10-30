@@ -220,6 +220,90 @@ const annotSubtypes = async (file) => {
   });
   await quit(app, win);
 
+  // ---- original text editing and right-click menus (Chromium-made PDF: Type0 fonts, TJ)
+  ({ app, win } = await launch(copy('chrome.pdf')));
+  const pageText = () => K(async () => {
+    const d = window.__katip.state.pdfDoc;
+    return (await (await d.getPage(1)).getTextContent()).items.map((i) => i.str).join('|');
+  });
+  await step('Orijinal metin düzenlenir (eski metin PDF\'ten silinir)', async () => {
+    await K(() => window.__katip.setTool('editText'));
+    const span = win.locator('.textLayer span', { hasText: 'Ahmet' }).first();
+    await span.click();
+    await win.waitForSelector('.te-input');
+    await win.keyboard.press('Control+A');
+    await win.keyboard.type('Müşteri adı: Ayşe Güler');
+    await win.keyboard.press('Enter');
+    await win.waitForFunction(() => window.__katip.state.undo.length === 1, null, { timeout: 15000 });
+    await win.waitForTimeout(300);
+    const txt = await pageText();
+    assert.ok(!txt.includes('Ahmet'), txt);
+    assert.ok(txt.includes('Ayşe Güler'), txt);
+    assert.ok(txt.includes('Toplam tutar: 1.250,00 TL'), txt);
+    await win.screenshot({ path: path.join(shots, 'e2e-textedit.png') });
+    await K(() => window.__katip.setTool('select'));
+  });
+
+  await step('Esc ile metin düzenleme iptal edilir', async () => {
+    await K(() => window.__katip.setTool('editText'));
+    await win.locator('.textLayer span', { hasText: 'Toplam' }).first().click();
+    await win.waitForSelector('.te-input');
+    await win.keyboard.type('xxx');
+    await win.keyboard.press('Escape');
+    assert.strictEqual(await win.locator('.te-input').count(), 0);
+    assert.ok((await pageText()).includes('Toplam tutar'));
+    await K(() => window.__katip.setTool('select'));
+  });
+
+  await step('Sağ tık: seçili metin menüsü, kopyala ve altını çiz', async () => {
+    const labels = await K(async () => {
+      const span = [...document.querySelectorAll('.textLayer span')].find((s) => s.textContent.includes('Toplam'));
+      const range = document.createRange();
+      range.selectNodeContents(span);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      const r = span.getBoundingClientRect();
+      const items = await window.__katip.ctx.contextMenu.itemsFor({ target: span, clientX: r.left + 5, clientY: r.top + r.height / 2 });
+      window.__testItems = items;
+      return items.filter((i) => i.label).map((i) => i.label);
+    });
+    for (const l of ['Kopyala', 'Metni vurgula', 'Metnin altını çiz', 'Metnin üstünü çiz', 'Metni düzenle']) assert.ok(labels.includes(l), labels.join(', '));
+    await K(() => window.__testItems.find((i) => i.id === 'copy').run());
+    assert.match(await app.evaluate(({ clipboard }) => clipboard.readText()), /Toplam tutar/);
+    await K(() => window.__testItems.find((i) => i.id === 'ul').run());
+    await win.waitForFunction(() => window.__katip.state.undo.length === 2, null, { timeout: 15000 });
+    await win.waitForFunction(() => [...document.querySelectorAll('.textLayer span')].some((x) => x.textContent.includes('Toplam')), null, { timeout: 15000 });
+    await K(async () => {
+      const span = [...document.querySelectorAll('.textLayer span')].find((x) => x.textContent.includes('Toplam'));
+      const range = document.createRange();
+      range.selectNodeContents(span);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      const r = span.getBoundingClientRect();
+      const items = await window.__katip.ctx.contextMenu.itemsFor({ target: span, clientX: r.left + 5, clientY: r.top + 5 });
+      await items.find((i) => i.id === 'hl').run();
+    });
+    await win.waitForFunction(() => window.__katip.state.undo.length === 3, null, { timeout: 15000 });
+    const subtypes = await K(async () => (await (await window.__katip.state.pdfDoc.getPage(1)).getAnnotations()).map((a) => a.subtype));
+    assert.ok(subtypes.includes('Underline') && subtypes.includes('Highlight'), subtypes.join(','));
+  });
+
+  await step('Sağ tık: sayfa ve küçük resim menüleri', async () => {
+    const labels = await K(async () => {
+      window.getSelection().removeAllRanges();
+      const page = document.querySelector('.page');
+      const r = page.getBoundingClientRect();
+      const items = await window.__katip.ctx.contextMenu.itemsFor({ target: page, clientX: r.left + 40, clientY: Math.min(r.bottom, window.innerHeight) - 60 });
+      return items.filter((i) => i.label).map((i) => i.label);
+    });
+    for (const l of ['Buraya not ekle', 'Yakınlaştır', 'Sayfayı sağa döndür', 'Yazdır…']) assert.ok(labels.includes(l), labels.join(', '));
+    await win.waitForSelector('#thumbs .thumb');
+    const thumbLabels = await K(async () => (await window.__katip.ctx.contextMenu.itemsFor({ target: document.querySelector('#thumbs .thumb') })).filter((i) => i.label).map((i) => i.label));
+    assert.ok(thumbLabels.includes('Sağa döndür') && thumbLabels.includes('Sayfayı sil'), thumbLabels.join(', '));
+  });
+  await quit(app, win);
+
   // ---- welcome screen
   ({ app, win } = await launch(null));
   await step('Karşılama ekranı', async () => {

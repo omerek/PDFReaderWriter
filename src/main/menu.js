@@ -103,6 +103,7 @@ function buildMenu({ recent, send, newWindow, openRecent, clearRecent }) {
         cmd('toolHand', 'El Aracı'),
         { type: 'separator' },
         cmd('toolHighlight', 'Metni Vurgula'),
+        cmd('toolEditText', 'Orijinal Metni Düzenle'),
         cmd('toolText', 'Metin Ekle'),
         cmd('toolDraw', 'Serbest Çizim'),
         cmd('toolNote', 'Yapışkan Not'),

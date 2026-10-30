@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('katip', {
   pdfOp: (op, args) => ipcRenderer.invoke('pdf:op', op, args),
   confirm: (opts) => ipcRenderer.invoke('app:confirm', opts),
   print: () => ipcRenderer.invoke('app:print'),
+  contextMenu: (items) => ipcRenderer.invoke('app:context-menu', items),
   setTitle: (t) => ipcRenderer.invoke('app:set-title', t),
   toggleFullscreen: (v) => ipcRenderer.invoke('app:toggle-fullscreen', v),
   newWindow: () => ipcRenderer.invoke('app:new-window'),

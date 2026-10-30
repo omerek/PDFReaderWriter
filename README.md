@@ -32,6 +32,9 @@ olarak seçmek için **Ayarlar → Uygulamalar → Varsayılan uygulamalar → .
 - Bağlantılar, belge özellikleri (başlık, yazar, konu, anahtar sözcük düzenleme)
 
 **Düzenleme ve açıklama**
+- **Orijinal metni düzenleme**: Düzenle aracıyla (E) sayfadaki mevcut yazıya tıklayıp
+  değiştirin. Eski harfler PDF'ten gerçekten silinir, yeni metin benzer yazı tipi, boyut ve
+  renkle yazılır (Arial, Times ve Courier ile ölçü uyumlu Liberation yazı tipleri, Türkçe karakterli)
 - Metin vurgulama (5 renk) ve serbest vurgulama
 - Metin kutusu ekleme (Türkçe karakterler gömülü yazı tipiyle kaydedilir)
 - Serbest çizim (renk, kalınlık, opaklık)
@@ -41,6 +44,14 @@ olarak seçmek için **Ayarlar → Uygulamalar → Varsayılan uygulamalar → .
   imzalar sonraki kullanımlar için saklanır
 - Form doldurma (metin, onay kutusu, açılır liste vb.) ve formu düzleştirme
 - Geri al / yinele
+
+**Sağ tık menüleri**
+- Seçili metin: Kopyala, Vurgula, Altını çiz, Üstünü çiz, Not ekle, Metni düzenle, Bul, Tümünü seç
+- Sayfa: Buraya not ekle, metin kutusu / resim / imza ekle, araçlar, yakınlaştırma,
+  sayfa gezinme, sayfayı döndürme / silme, yazdır, belge özellikleri
+- Küçük resimler ve Sayfaları Düzenle ekranı: döndür, çoğalt, boş sayfa / dosyadan sayfa ekle,
+  ayıkla, sil
+- Metin kutuları: Kes, Kopyala, Yapıştır, Tümünü seç
 
 **Sayfa işlemleri** (Sayfaları Düzenle ekranı)
 - Sürükle-bırak ile sıralama, döndürme, silme, çoğaltma
@@ -80,13 +91,16 @@ Test PDF'lerini yeniden üretmek için: `pip install reportlab && npm run fixtur
 | Görüntüleme, arama, açıklama düzenleyicileri, form doldurma | PDF.js 6 | Apache 2.0 |
 | Sayfa işlemleri, birleştirme, bölme, notlar, Türkçe görünüm düzeltmesi | pdf-lib + fontkit | MIT |
 | Unicode yazı tipi | DejaVu Sans | Bitstream Vera (serbest) |
+| Metin düzenleme yazı tipleri | Liberation Sans / Serif / Mono | SIL OFL 1.1 |
 | Kurulum | electron-builder (NSIS) | MIT |
 
 ```
-src/main/       Ana süreç: pencere, menü, dosya erişimi, pdf-lib işlemleri (pdfops.js)
+src/main/       Ana süreç: pencere, menü, dosya erişimi, pdf-lib işlemleri (pdfops.js),
+                orijinal metin düzenleme (textedit.js)
 src/preload/    Güvenli köprü (contextIsolation + sandbox)
 src/renderer/   Arayüz: app.js (görüntüleyici, araçlar, kaydetme), sidebar.js,
-                organizer.js (sayfa düzenleme), signature.js, dialogs.js
+                organizer.js (sayfa düzenleme), textedit-ui.js, contextmenu.js,
+                signature.js, dialogs.js
 test/           unit.cjs (pdf-lib işlemleri), e2e.cjs (gerçek uygulama üzerinde arayüz testi)
 ```
 
@@ -95,8 +109,9 @@ olarak yazılır; Adobe Acrobat, tarayıcılar ve diğer okuyucularda da görün
 
 ## Bilinen sınırlamalar
 
-- Mevcut PDF metnini yerinde değiştirme (sayfadaki orijinal yazıyı düzenleme) yoktur; yeni
-  metin kutusu, not, çizim ve resim eklenebilir.
+- Orijinal metin düzenleme satır satır çalışır; düzenlenen satır Liberation yazı tipiyle yeniden
+  yazılır, bu yüzden özel yazı tiplerinde küçük görünüm farkı olabilir. Taranmış (resim) sayfalarda
+  metin olmadığından düzenleme yapılamaz.
 - Şifreli PDF'lerde açıklama ve form doldurma çalışır; sayfa işlemleri (döndürme, silme vb.)
   için önce şifresiz bir kopya kaydedilmelidir.
 - Dijital (sertifikalı) imza desteklenmez; imza aracı görsel imza ekler.
