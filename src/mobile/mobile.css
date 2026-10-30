@@ -1,0 +1,152 @@
+/* Katip PDF for Android: touch layout on top of the desktop styles (html.mobile). */
+
+html.mobile {
+  --tb-h: 52px;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+.mobile body { font-size: 15px; font-family: system-ui, "Roboto", sans-serif; }
+.mobile svg { width: 22px; height: 22px; }
+
+/* ---------- toolbar: one horizontally scrolling row, menu button pinned on the right ---------- */
+.mobile #toolbar {
+  padding: 0 0 0 4px;
+  gap: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  position: relative;
+}
+.mobile #toolbar::-webkit-scrollbar { display: none; }
+.mobile .tb { width: 44px; height: 44px; border-radius: 10px; }
+.mobile .tb:hover { background: transparent; }
+.mobile .tb:active { background: var(--active); }
+.mobile .tb.active { background: var(--accent-soft); }
+.mobile .tb-sep { margin: 0 4px; height: 28px; }
+.mobile .tb-spacer { flex: 0 0 8px; }
+.mobile .tb-input { width: 48px; height: 36px; font-size: 15px; }
+.mobile .tb-label { min-width: 0; padding: 0 2px 0 4px; white-space: nowrap; }
+/* Pinch zoom replaces most zoom buttons. */
+.mobile #zoomSelect,
+.mobile [data-cmd="zoomIn"],
+.mobile [data-cmd="zoomOut"],
+.mobile [data-cmd="fitPage"],
+.mobile [data-cmd="rotateViewCw"] { display: none; }
+.mobile #mobileMenuBtn {
+  position: sticky; right: 0; flex: none; margin-left: auto;
+  background: var(--panel); border-radius: 0;
+  box-shadow: -8px 0 8px -6px rgba(0, 0, 0, .25);
+}
+
+/* ---------- tool options: wrap, hide the hint text on phones ---------- */
+.mobile .tool-options {
+  height: auto; min-height: 48px; flex-wrap: wrap; gap: 8px 16px; padding: 6px 12px;
+}
+.mobile .to-hint { flex-basis: 100%; margin: 0; font-size: 13px; }
+.mobile .swatch { width: 30px; height: 30px; }
+.mobile .swatches { gap: 8px; }
+.mobile .to-field input[type=range] { width: 120px; height: 28px; }
+.mobile .to-field input[type=number] { height: 34px; width: 64px; }
+
+/* ---------- sidebar becomes a drawer over the page on phones ---------- */
+@media (max-width: 759px) {
+  .mobile #sidebar {
+    position: absolute; top: 0; bottom: 0; left: 0; z-index: 30;
+    width: min(82vw, 320px) !important;
+    box-shadow: var(--shadow);
+  }
+  .mobile .tb-label { display: none; }
+  .mobile #pageInput { width: 44px; }
+}
+.mobile #sidebarResizer { display: none; }
+.mobile .sb-tab { height: 40px; }
+.mobile .list-item, .mobile .tree-link { padding-top: 10px; padding-bottom: 10px; }
+
+/* ---------- viewer ---------- */
+.mobile #viewerContainer { touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch; }
+.mobile .pdfViewer .page { margin: 8px auto; }
+.mobile .textLayer { -webkit-touch-callout: none; }
+
+/* ---------- find bar spans the width ---------- */
+.mobile #findbar { left: 6px; right: 6px; top: 6px; flex-wrap: wrap; }
+.mobile #findInput { flex: 1; min-width: 120px; height: 38px; font-size: 16px; }
+.mobile #findbar .tb.small { width: 40px; height: 40px; }
+.mobile .chk { font-size: 14px; padding: 6px 2px; }
+.mobile .chk input { width: 20px; height: 20px; }
+
+/* ---------- welcome ---------- */
+.mobile .welcome-card { padding: 20px 16px; width: 100%; }
+.mobile .welcome-card > p.small { display: none; } /* "drag a file here" */
+.mobile .welcome-actions { flex-direction: column; align-items: stretch; }
+.mobile .welcome-actions .btn { justify-content: center; }
+.mobile #welcome { align-items: flex-start; overflow: auto; padding-top: 6vh; }
+.mobile .recent-item { padding: 12px 10px; }
+.mobile .recent-item .ri-path { display: none; }
+
+/* ---------- buttons & forms ---------- */
+.mobile .btn { min-height: 44px; padding: 0 18px; font-size: 15px; }
+.mobile input, .mobile select, .mobile textarea { font-size: 16px; }
+.mobile .form-row input[type=text], .mobile .form-row input[type=password],
+.mobile .form-row input[type=number], .mobile .form-row select { min-height: 42px; }
+
+/* ---------- dialogs fill the phone width ---------- */
+.mobile dialog {
+  min-width: 0; width: calc(100vw - 20px) !important; max-width: 640px;
+  max-height: calc(100vh - 40px); overflow: auto;
+}
+.mobile dialog form { padding: 16px; }
+.mobile .dialog-buttons { flex-wrap: wrap; }
+.mobile .dialog-buttons .btn { flex: 1 1 auto; }
+.mobile .sig-pad { width: 100%; height: auto; aspect-ratio: 560 / 200; }
+.mobile table.props td { word-break: break-word; }
+
+/* ---------- page organizer ---------- */
+.mobile .org-toolbar { flex-wrap: wrap; height: auto; gap: 2px; padding: 6px; }
+.mobile .org-toolbar strong { flex-basis: 100%; }
+.mobile .org-toolbar label.small { display: none; }
+
+/* ---------- status bar ---------- */
+.mobile #statusFile { display: none; }
+
+/* ---------- bottom sheet ---------- */
+.msheet-backdrop {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0, 0, 0, 0); transition: background .18s;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.msheet-backdrop.open { background: rgba(0, 0, 0, .38); }
+.msheet {
+  width: 100%; max-width: 560px; max-height: 78vh;
+  display: flex; flex-direction: column;
+  background: var(--panel); color: var(--text);
+  border-radius: 16px 16px 0 0; box-shadow: var(--shadow);
+  transform: translateY(100%); transition: transform .18s ease-out;
+}
+.msheet-backdrop.open .msheet { transform: none; }
+.msheet-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--border); margin: 8px auto 4px; flex: none; }
+.msheet-list { overflow-y: auto; padding: 0 0 10px; overscroll-behavior: contain; }
+.msheet-title { padding: 6px 20px 8px; font-weight: 600; }
+.msheet-header {
+  padding: 14px 20px 4px; font-size: 12px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.msheet-sep { height: 1px; background: var(--border); margin: 6px 0; }
+.msheet-item {
+  display: flex; align-items: center; width: 100%; min-height: 48px;
+  padding: 0 20px; border: 0; background: transparent; text-align: left; font-size: 16px;
+}
+.msheet-item:active { background: var(--active); }
+.msheet-item:disabled { opacity: .4; }
+.msheet-item.check::after { content: ""; margin-left: auto; width: 18px; height: 18px; }
+.msheet-item.checked { color: var(--accent); font-weight: 600; }
+.msheet-item.checked::after {
+  content: "✓"; width: auto; height: auto; font-size: 18px;
+}
+
+/* ---------- selection action bar ---------- */
+#selBar {
+  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 900;
+  display: flex; gap: 4px; padding: 6px; max-width: calc(100vw - 16px); overflow-x: auto;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow);
+}
+#selBar .btn { white-space: nowrap; min-height: 40px; padding: 0 10px; border: 0; font-size: 14px; }

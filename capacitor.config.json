@@ -1,0 +1,17 @@
+{
+  "appId": "com.katip.pdf",
+  "appName": "Katip PDF",
+  "webDir": "android-web",
+  "server": {
+    "androidScheme": "https",
+    "appStartPath": "/src/renderer/index.html"
+  },
+  "android": {
+    "backgroundColor": "#f3f4f6"
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "native"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 // "Sayfaları Düzenle": page grid with selection, drag-and-drop reordering and page operations.
 
-import { $, $$, el, toast, busy } from './ui.js';
+import { $, $$, el, toast, busy, prompt } from './ui.js';
 import * as dialogs from './dialogs.js';
 
 export function initOrganizer(ctx) {
@@ -11,6 +11,8 @@ export function initOrganizer(ctx) {
   let anchor = null;
   let generation = 0;
   let dragFrom = null;
+  // Touch screens (Android): a tap toggles a page's selection and pages are moved from the menu.
+  const touch = !!api.isMobile;
 
   function pageCount() {
     return state.pdfDoc ? state.pdfDoc.numPages : 0;
@@ -41,7 +43,7 @@ export function initOrganizer(ctx) {
     }, { root: grid, rootMargin: '400px 0px' });
 
     for (let i = 0; i < doc.numPages; i++) {
-      const node = el('div', { class: 'org-page', 'data-index': i, draggable: 'true' },
+      const node = el('div', { class: 'org-page', 'data-index': i, draggable: touch ? 'false' : 'true' },
         el('div', { class: 'org-img' }),
         el('div', { class: 'org-num' }, i + 1));
       grid.append(node);
@@ -62,7 +64,7 @@ export function initOrganizer(ctx) {
       const [a, b] = [Math.min(anchor, i), Math.max(anchor, i)];
       if (!e.ctrlKey) selected.clear();
       for (let k = a; k <= b; k++) selected.add(k);
-    } else if (e.ctrlKey) {
+    } else if (e.ctrlKey || touch) {
       if (selected.has(i)) selected.delete(i); else selected.add(i);
       anchor = i;
     } else {
@@ -113,10 +115,15 @@ export function initOrganizer(ctx) {
     const moving = dragFrom;
     dragFrom = null;
     if (!t) return;
+    await movePages(moving, t.index);
+  });
+
+  // Moves the given pages so that they start before page index `before` (in the current order).
+  async function movePages(moving, before) {
     const n = pageCount();
     const rest = [];
     for (let i = 0; i < n; i++) if (!moving.includes(i)) rest.push(i);
-    const insertAt = rest.filter((i) => i < t.index).length;
+    const insertAt = rest.filter((i) => i < before).length;
     const order = [...rest.slice(0, insertAt), ...moving, ...rest.slice(insertAt)];
     if (order.every((v, i) => v === i)) return;
     const ok = await ctx.applyOp('Sayfa sırası', 'reorder', { order });
@@ -124,7 +131,24 @@ export function initOrganizer(ctx) {
       selected = new Set(moving.map((_, k) => insertAt + k));
       await render();
     }
-  });
+  }
+
+  async function moveTo() {
+    const s = selection();
+    if (!s) return;
+    const n = pageCount();
+    const v = await prompt({
+      title: 'Sayfaları taşı',
+      label: `Seçili sayfalar hangi sayfanın önüne taşınsın? (1-${n}, sona taşımak için ${n + 1})`,
+      value: String(Math.max(1, s[0])),
+    });
+    const target = parseInt(v, 10);
+    if (!Number.isFinite(target) || target < 1 || target > n + 1) {
+      if (v !== null) toast('Geçersiz sayfa numarası.');
+      return;
+    }
+    await movePages(s, target - 1);
+  }
 
   // ----- actions
   function selection() {
@@ -220,13 +244,16 @@ export function initOrganizer(ctx) {
       { id: 'dup', label: many ? 'Seçili sayfaları çoğalt' : 'Çoğalt', run: actions.duplicate },
       { id: 'ext', label: many ? 'Seçili sayfaları ayıkla…' : 'Sayfayı ayıkla…', run: actions.extract },
       { id: 'del', label: many ? 'Seçili sayfaları sil' : 'Sil', accelerator: 'Delete', enabled: selected.size < pageCount(), run: actions.delete },
+      { id: 'move', label: many ? 'Seçili sayfaları taşı…' : 'Taşı…', run: moveTo },
+      touch ? { id: 'first', label: 'Başa taşı', run: () => movePages([...selected].sort((a, b) => a - b), 0) } : null,
+      touch ? { id: 'last', label: 'Sona taşı', run: () => movePages([...selected].sort((a, b) => a - b), pageCount()) } : null,
       { type: 'separator' },
       { id: 'blank', label: 'Sonrasına boş sayfa ekle', run: actions.insertBlank },
       { id: 'ins', label: 'Sonrasına dosyadan sayfa ekle…', run: actions.insertFile },
       { type: 'separator' },
       { id: 'go', label: 'Bu sayfayı aç', run: () => { close(); ctx.goToPage(i + 1); } },
       { id: 'all', label: 'Tümünü seç', accelerator: 'Ctrl+A', run: actions.selectAll },
-    ];
+    ].filter(Boolean);
   }
 
   return { open, close, insertFromFile, menuFor, isOpen: () => !root.hidden };
