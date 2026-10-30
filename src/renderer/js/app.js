@@ -6,6 +6,8 @@ import { $, $$, el, toast, busy, prompt, alertDialog, basename } from './ui.js';
 import { initSidebar } from './sidebar.js';
 import { initOrganizer } from './organizer.js';
 import { openSignatureDialog } from './signature.js';
+import { initTextEdit } from './textedit-ui.js';
+import { initContextMenu } from './contextmenu.js';
 import * as dialogs from './dialogs.js';
 
 const PDFJS = new URL('../../../node_modules/pdfjs-dist/', import.meta.url).href;
@@ -53,6 +55,10 @@ const TOOL_DEFS = {
   note: {
     mode: ET.NONE, title: 'Yapışkan Not', fields: ['color'], palette: 'highlight',
     hint: 'Notun ekleneceği yere tıklayın. Esc ile iptal.',
+  },
+  editText: {
+    mode: ET.NONE, title: 'Metni Düzenle', fields: [],
+    hint: 'Değiştirmek istediğiniz satıra tıklayın. Enter: uygula, Esc: iptal. Boş bırakırsanız metin silinir.',
   },
   image: {
     mode: ET.STAMP, title: 'Resim / İmza', fields: [],
@@ -123,6 +129,8 @@ const ctx = {
 
 const sidebar = initSidebar(ctx);
 const organizer = initOrganizer(ctx);
+ctx.organizer = organizer;
+ctx.textEdit = initTextEdit(ctx);
 
 // ---------------------------------------------------------------- loading
 async function openPath(filePath) {
@@ -503,6 +511,8 @@ function setTool(tool, { skipMode = false } = {}) {
   state.tool = tool;
   $$('#toolGroup .tool').forEach((b) => b.classList.toggle('active', b.dataset.tool === tool));
   container.classList.toggle('hand', tool === 'hand');
+  container.classList.toggle('edit-text', tool === 'editText');
+  if (tool !== 'editText') ctx.textEdit?.close();
 
   if (!skipMode && state.pdfDoc) {
     try {
@@ -896,6 +906,7 @@ const commands = {
   toolNote: () => setTool('note'),
   toolImage: () => pickImage(),
   toolSign: () => signDocument(),
+  toolEditText: () => setTool('editText'),
   organize: () => state.pdfDoc && organizer.open(),
   rotatePagesCw: () => applyOp('Sayfa döndürme', 'rotate', { pages: [pdfViewer.currentPageNumber - 1], delta: 90 }),
   rotatePagesCcw: () => applyOp('Sayfa döndürme', 'rotate', { pages: [pdfViewer.currentPageNumber - 1], delta: -90 }),
@@ -919,6 +930,15 @@ async function runCommand(name) {
   }
 }
 ctx.runCommand = runCommand;
+ctx.setTool = setTool;
+ctx.find = (query) => { openFind(); findInput.value = query; dispatchFind(''); };
+ctx.extractPages = async (pages) => {
+  const bytes = await getCurrentBytes();
+  const out = await api.pdfOp('extract', { bytes, pages });
+  const target = await saveBytesAs(out, `${docBaseName()}_sayfa${pages[0] + 1}.pdf`);
+  if (target) toast('Sayfa kaydedildi.');
+};
+ctx.contextMenu = initContextMenu(ctx);
 
 api.on('cmd', runCommand);
 api.on('app:open-path', (p) => openPath(p));
@@ -946,7 +966,7 @@ document.addEventListener('keydown', (e) => {
   }
   // Let pdf.js editors handle keys while an annotation is selected.
   if (document.activeElement?.closest?.('.annotationEditorLayer')) return;
-  const map = { v: 'select', h: 'hand', u: 'highlight', t: 'text', d: 'draw', n: 'note' };
+  const map = { v: 'select', h: 'hand', u: 'highlight', t: 'text', d: 'draw', n: 'note', e: 'editText' };
   const tool = map[e.key.toLowerCase()];
   if (tool && !e.shiftKey) { e.preventDefault(); setTool(tool); return; }
   if (e.key === 'Home') { e.preventDefault(); goToPage(1); }
@@ -1003,7 +1023,7 @@ async function renderRecent() {
 // ---------------------------------------------------------------- startup
 window.__katipIsEmpty = () => !state.pdfDoc;
 // Hooks for the automated end-to-end tests.
-window.__katip = { state, pdfViewer, eventBus, commands, setTool, loadBytes, getCurrentBytes, applyOp, insertImageFile, renderPageToCanvas };
+window.__katip = { state, pdfViewer, eventBus, commands, setTool, loadBytes, getCurrentBytes, applyOp, insertImageFile, renderPageToCanvas, ctx };
 
 async function init() {
   const saved = await api.getSetting('prefs', null);

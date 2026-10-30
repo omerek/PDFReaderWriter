@@ -82,6 +82,48 @@ async function t(name, fn) {
   await t('encrypted / invalid input gives readable error', async () => {
     await assert.rejects(ops.run('rotate', { bytes: new Uint8Array([1, 2, 3]), pages: [0], delta: 90 }), /PDF okunamadı/);
   });
+  // ---- original text editing
+  const textedit = require('../src/main/textedit');
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const textItems = async (b) => {
+    const d = await pdfjs.getDocument({ data: b.slice(), verbosity: 0, standardFontDataUrl: path.join(__dirname, '..', 'node_modules', 'pdfjs-dist', 'standard_fonts') + path.sep }).promise;
+    return (await (await d.getPage(1)).getTextContent()).items.filter((i) => i.str.trim());
+  };
+  await t('parseContent: strings, arrays, inline images', async () => {
+    const src = 'BT /F1 12 Tf (a\\(b\\)c \\303) Tj [(x) -250 <0041>] TJ ET BI /W 1 /H 1 ID \x00\xffEI Q EI q 1 0 0 1 5 5 cm Q';
+    const ops = textedit.parseContent(src).map((o) => o.op);
+    assert.deepStrictEqual(ops, ['BT', 'Tf', 'Tj', 'TJ', 'ET', 'BI', 'q', 'cm', 'Q']);
+    const tj = textedit.parseContent(src)[2];
+    assert.deepStrictEqual(tj.args[0].bytes, [97, 40, 98, 41, 99, 32, 0o303]);
+  });
+  for (const [file, needle, replacement] of [['chrome.pdf', 'Ahmet', 'Müşteri adı: Ayşe Güler'], ['ornek.pdf', 'Satır 3:', 'Yeni satır ğşı']]) {
+    await t(`editText (${file}): old glyphs removed, other lines kept`, async () => {
+      const bytes = fx(file);
+      const before = await textItems(bytes);
+      const it = before.find((i) => i.str.includes(needle));
+      const out = await ops.run('editText', { bytes, page: 0, item: { transform: it.transform, width: it.width, height: it.height }, text: replacement, font: { family: 'sans' } });
+      const after = (await textItems(out)).map((i) => i.str);
+      assert.ok(!after.some((s) => s.includes(needle)), after.join('|'));
+      assert.ok(after.some((s) => s.includes(replacement)), after.join('|'));
+      assert.strictEqual(after.length, before.length, after.join('|'));
+    });
+  }
+  await t('editText with empty text deletes the line', async () => {
+    const bytes = fx('chrome.pdf');
+    const it = (await textItems(bytes)).find((i) => i.str.includes('Toplam'));
+    const out = await ops.run('editText', { bytes, page: 0, item: { transform: it.transform, width: it.width, height: it.height }, text: '' });
+    const after = (await textItems(out)).map((i) => i.str).join('|');
+    assert.ok(!after.includes('Toplam') && after.includes('Fatura Bilgileri'), after);
+  });
+  await t('addMarkup (underline / strike-out)', async () => {
+    const q = [72, 700, 200, 700, 72, 688, 200, 688];
+    for (const kind of ['Underline', 'StrikeOut']) {
+      const out = await ops.run('addMarkup', { bytes: doc, page: 0, quads: [q], kind });
+      const a = (await PDFDocument.load(out)).getPage(0).node.Annots().lookup(0);
+      assert.strictEqual(String(a.get(PDFName.of('Subtype'))), `/${kind}`);
+    }
+  });
+
   console.log(failed ? `\n${failed} test başarısız` : '\nTüm birim testleri başarılı');
   process.exit(failed ? 1 : 0);
 })();

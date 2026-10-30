@@ -1,3 +1,16 @@
+@font-face { font-family: "Katip Sans"; src: url("../assets/fonts/LiberationSans-Regular.ttf"); font-weight: 400; font-style: normal; }
+@font-face { font-family: "Katip Sans"; src: url("../assets/fonts/LiberationSans-Bold.ttf"); font-weight: 700; font-style: normal; }
+@font-face { font-family: "Katip Sans"; src: url("../assets/fonts/LiberationSans-Italic.ttf"); font-weight: 400; font-style: italic; }
+@font-face { font-family: "Katip Sans"; src: url("../assets/fonts/LiberationSans-BoldItalic.ttf"); font-weight: 700; font-style: italic; }
+@font-face { font-family: "Katip Serif"; src: url("../assets/fonts/LiberationSerif-Regular.ttf"); font-weight: 400; font-style: normal; }
+@font-face { font-family: "Katip Serif"; src: url("../assets/fonts/LiberationSerif-Bold.ttf"); font-weight: 700; font-style: normal; }
+@font-face { font-family: "Katip Serif"; src: url("../assets/fonts/LiberationSerif-Italic.ttf"); font-weight: 400; font-style: italic; }
+@font-face { font-family: "Katip Serif"; src: url("../assets/fonts/LiberationSerif-BoldItalic.ttf"); font-weight: 700; font-style: italic; }
+@font-face { font-family: "Katip Mono"; src: url("../assets/fonts/LiberationMono-Regular.ttf"); font-weight: 400; font-style: normal; }
+@font-face { font-family: "Katip Mono"; src: url("../assets/fonts/LiberationMono-Bold.ttf"); font-weight: 700; font-style: normal; }
+@font-face { font-family: "Katip Mono"; src: url("../assets/fonts/LiberationMono-Italic.ttf"); font-weight: 400; font-style: italic; }
+@font-face { font-family: "Katip Mono"; src: url("../assets/fonts/LiberationMono-BoldItalic.ttf"); font-weight: 700; font-style: italic; }
+
 :root {
   --bg: #f3f4f6;
   --panel: #ffffff;
@@ -307,3 +320,25 @@ body.presentation .pdfViewer .page { box-shadow: none; }
 
 /* pdf.js editor tweaks */
 .annotationEditorLayer .freeTextEditor .internal { font-family: "Segoe UI", sans-serif; }
+
+/* ---------- original text editing ---------- */
+#viewerContainer.edit-text .textLayer { cursor: text; }
+#viewerContainer.edit-text .textLayer span:hover { outline: 1px dashed var(--accent); outline-offset: 1px; background: rgba(200, 16, 46, .06); }
+#viewerContainer.edit-text .textLayer ::selection { background: transparent; }
+.te-root { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
+.te-input {
+  position: absolute; pointer-events: auto; background: #fff; color: #000; white-space: pre;
+  outline: 2px solid var(--accent); outline-offset: 1px; padding: 0 2px; user-select: text; cursor: text;
+  box-shadow: 0 2px 10px rgba(0,0,0,.25);
+}
+.te-bar {
+  position: absolute; pointer-events: auto; display: flex; gap: 4px; align-items: center;
+  padding: 4px; border-radius: 7px; background: var(--panel); border: 1px solid var(--border); box-shadow: var(--shadow);
+  white-space: nowrap; color: var(--text);
+}
+.te-bar select, .te-bar input[type=number] { height: 26px; border: 1px solid var(--border); border-radius: 5px; background: var(--panel-2); }
+.te-bar input[type=number] { width: 58px; padding: 0 4px; }
+.te-bar input[type=color] { width: 30px; height: 26px; padding: 0; border: 1px solid var(--border); border-radius: 5px; background: none; }
+.te-btn { width: 28px; height: 26px; border: 1px solid var(--border); border-radius: 5px; background: var(--panel-2); cursor: pointer; }
+.te-btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.small-btn { height: 26px; padding: 0 10px; }

@@ -1,7 +1,7 @@
 {
   "name": "katip-pdf",
   "productName": "Katip PDF",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Katip PDF - Windows için PDF okuyucu ve düzenleyici",
   "main": "src/main/main.js",
   "author": "Ömer",

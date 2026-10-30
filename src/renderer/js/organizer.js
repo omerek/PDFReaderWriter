@@ -205,5 +205,29 @@ export function initOrganizer(ctx) {
     grid.replaceChildren();
   }
 
-  return { open, close, insertFromFile, isOpen: () => !root.hidden };
+  // Right-click menu for a page in the grid (see contextmenu.js).
+  function menuFor(node) {
+    const i = Number(node.dataset.index);
+    if (!selected.has(i)) {
+      selected = new Set([i]);
+      anchor = i;
+      updateSelLabel();
+    }
+    const many = selected.size > 1;
+    return [
+      { id: 'rotR', label: 'Sağa döndür', run: actions.rotateCw },
+      { id: 'rotL', label: 'Sola döndür', run: actions.rotateCcw },
+      { id: 'dup', label: many ? 'Seçili sayfaları çoğalt' : 'Çoğalt', run: actions.duplicate },
+      { id: 'ext', label: many ? 'Seçili sayfaları ayıkla…' : 'Sayfayı ayıkla…', run: actions.extract },
+      { id: 'del', label: many ? 'Seçili sayfaları sil' : 'Sil', accelerator: 'Delete', enabled: selected.size < pageCount(), run: actions.delete },
+      { type: 'separator' },
+      { id: 'blank', label: 'Sonrasına boş sayfa ekle', run: actions.insertBlank },
+      { id: 'ins', label: 'Sonrasına dosyadan sayfa ekle…', run: actions.insertFile },
+      { type: 'separator' },
+      { id: 'go', label: 'Bu sayfayı aç', run: () => { close(); ctx.goToPage(i + 1); } },
+      { id: 'all', label: 'Tümünü seç', accelerator: 'Ctrl+A', run: actions.selectAll },
+    ];
+  }
+
+  return { open, close, insertFromFile, menuFor, isOpen: () => !root.hidden };
 }

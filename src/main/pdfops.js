@@ -10,9 +10,21 @@ const {
   PDFDocument, PDFName, PDFString, PDFArray, PDFHexString, degrees, rgb,
 } = require('pdf-lib');
 const fontkit = require('@pdf-lib/fontkit');
+const textedit = require('./textedit');
 
-const FONT_PATH = path.join(__dirname, '..', 'assets', 'fonts', 'DejaVuSans.ttf');
+const FONT_DIR = path.join(__dirname, '..', 'assets', 'fonts');
+const FONT_PATH = path.join(FONT_DIR, 'DejaVuSans.ttf');
 let fontBytes = null;
+const fontFileCache = new Map();
+
+// Metric-compatible stand-ins for the common PDF fonts (Arial/Helvetica, Times, Courier).
+function editFontFile({ family = 'sans', bold = false, italic = false } = {}) {
+  const base = { serif: 'LiberationSerif', mono: 'LiberationMono' }[family] || 'LiberationSans';
+  const style = bold && italic ? 'BoldItalic' : bold ? 'Bold' : italic ? 'Italic' : 'Regular';
+  const file = path.join(FONT_DIR, `${base}-${style}.ttf`);
+  if (!fontFileCache.has(file)) fontFileCache.set(file, fs.readFileSync(file));
+  return fontFileCache.get(file);
+}
 
 class OpError extends Error {}
 
@@ -153,6 +165,98 @@ const ops = {
       C: color,
       F: 4 | 8 | 16, // Print | NoZoom | NoRotate
       Open: false,
+    });
+    const ref = doc.context.register(annot);
+    let annots = p.node.lookup(PDFName.of('Annots'));
+    if (!(annots instanceof PDFArray)) {
+      annots = doc.context.obj([]);
+      p.node.set(PDFName.of('Annots'), annots);
+    }
+    annots.push(ref);
+    return save(doc);
+  },
+
+  // Replaces one line of the page's original text. `item` is a pdf.js text item
+  // ({ transform, width, height }) in PDF user space.
+  async editText({ bytes, page, item, text, font, size, color = [0, 0, 0] }) {
+    const doc = await load(bytes);
+    checkIndices(doc, [page]);
+    const p = doc.getPage(page);
+    const [a, b, c, d, e, f] = item.transform;
+    const len = (x, y) => Math.hypot(x, y) || 1;
+    const u = [a / len(a, b), b / len(a, b)];
+    const v = [c / len(c, d), d / len(c, d)];
+    const height = item.height || len(c, d);
+    const region = { origin: [e, f], u, v, width: item.width, height };
+
+    const content = textedit.pageContent(p);
+    const { content: edited, removed } = textedit.removeGlyphs(content, p.node.Resources(), region);
+    if (removed) {
+      textedit.setPageContent(p, edited);
+    } else {
+      // The text is not in the page's own content stream (e.g. inside a form XObject):
+      // cover it instead.
+      const pad = height * 0.15;
+      const corner = [e - u[0] * pad - v[0] * height * 0.3, f - u[1] * pad - v[1] * height * 0.3];
+      p.drawRectangle({
+        x: corner[0], y: corner[1], width: item.width + 2 * pad, height: height * 1.35,
+        rotate: degrees((Math.atan2(u[1], u[0]) * 180) / Math.PI), color: rgb(1, 1, 1),
+      });
+    }
+
+    const value = String(text || '');
+    if (value.trim()) {
+      doc.registerFontkit(fontkit);
+      const embedded = await doc.embedFont(editFontFile(font), { subset: true });
+      p.drawText(value, {
+        x: e, y: f, size: size || height, font: embedded, color: rgb(...color),
+        rotate: degrees((Math.atan2(u[1], u[0]) * 180) / Math.PI),
+      });
+    }
+    return save(doc);
+  },
+
+  // Underline / strike-out / highlight markup over a text selection.
+  // quads: arrays of 8 numbers (x1 y1 x2 y2 x3 y3 x4 y4: top-left, top-right, bottom-left, bottom-right).
+  async addMarkup({ bytes, page, quads, kind = 'Underline', color = [0, 0, 1], author = '', contents = '' }) {
+    const doc = await load(bytes);
+    checkIndices(doc, [page]);
+    const p = doc.getPage(page);
+    const xs = quads.flatMap((q) => [q[0], q[2], q[4], q[6]]);
+    const ys = quads.flatMap((q) => [q[1], q[3], q[5], q[7]]);
+    const rect = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+    const n = (x) => (Math.round(x * 100) / 100).toString();
+    const ops = [`${color.map(n).join(' ')} RG`];
+    let resources;
+    if (kind === 'Highlight') {
+      // Filled quads blended with "multiply" so the text stays readable.
+      resources = { ExtGState: { GS0: { BM: 'Multiply', CA: 1, ca: 1 } } };
+      ops.splice(0, 1, '/GS0 gs', `${color.map(n).join(' ')} rg`);
+      for (const q of quads) ops.push(`${n(q[0])} ${n(q[1])} m ${n(q[2])} ${n(q[3])} l ${n(q[6])} ${n(q[7])} l ${n(q[4])} ${n(q[5])} l f`);
+    }
+    for (const q of kind === 'Highlight' ? [] : quads) {
+      const h = Math.abs(q[1] - q[5]);
+      ops.push(`${n(Math.max(0.5, h / 14))} w`);
+      // Bottom (underline) or middle (strike-out) of the quad.
+      const k = kind === 'StrikeOut' ? 0.45 : 0.08;
+      const y1 = q[5] + (q[1] - q[5]) * k;
+      const y2 = q[7] + (q[3] - q[7]) * k;
+      ops.push(`${n(q[4])} ${n(y1)} m ${n(q[6])} ${n(y2)} l S`);
+    }
+    const ap = doc.context.flateStream(ops.join('\n'), {
+      Type: 'XObject', Subtype: 'Form', FormType: 1, BBox: rect, ...(resources ? { Resources: resources } : {}),
+    });
+    const annot = doc.context.obj({
+      Type: 'Annot',
+      Subtype: kind,
+      Rect: rect,
+      QuadPoints: quads.flat(),
+      C: color,
+      F: 4,
+      T: PDFHexString.fromText(author),
+      Contents: PDFHexString.fromText(contents),
+      M: PDFString.fromDate(new Date()),
+      AP: { N: doc.context.register(ap) },
     });
     const ref = doc.context.register(annot);
     let annots = p.node.lookup(PDFName.of('Annots'));
