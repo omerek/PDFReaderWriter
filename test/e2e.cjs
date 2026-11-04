@@ -97,6 +97,13 @@ const annotSubtypes = async (file) => {
     for (let i = 1; i <= 10; i++) await win.mouse.move(sx + i * 15, sy + (i % 2) * 20);
     await win.mouse.up();
     await win.waitForTimeout(300);
+    // The stroke must keep the chosen colour (app-wide icon CSS once overrode it).
+    const ink = await K(() => {
+      const svg = document.querySelector('.page[data-page-number="2"] .canvasWrapper svg.draw');
+      const cs = svg && getComputedStyle(svg);
+      return cs && { stroke: cs.stroke, attr: svg.getAttribute('stroke') };
+    });
+    assert.ok(ink && ink.stroke === 'rgb(225, 29, 72)', `mürekkep rengi yanlış: ${JSON.stringify(ink)}`);
     await K(() => window.__katip.setTool('select'));
     await win.waitForTimeout(300);
     assert.ok(await K(() => window.__katip.state.pdfDoc.annotationStorage.size) >= 1);
@@ -112,6 +119,14 @@ const annotSubtypes = async (file) => {
     await win.mouse.move(b.x + b.width - 2, b.y + b.height / 2, { steps: 8 });
     await win.mouse.up();
     await win.waitForTimeout(500);
+    // Highlight must be filled with the palette colour, not white/none.
+    const hl = await K(() => {
+      const svg = document.querySelector('.page[data-page-number="2"] .canvasWrapper svg.highlight');
+      const cs = svg && getComputedStyle(svg);
+      return cs && { fill: cs.fill, stroke: cs.stroke };
+    });
+    assert.ok(hl && hl.fill === 'rgb(255, 255, 152)', `vurgu rengi yanlış: ${JSON.stringify(hl)}`);
+    assert.ok(hl.stroke === 'none', `vurgu kenarlığı olmamalı: ${JSON.stringify(hl)}`);
     await K(() => window.__katip.setTool('select'));
     assert.ok(await K(() => window.__katip.state.pdfDoc.annotationStorage.size) >= 2);
   });
