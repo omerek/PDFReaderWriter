@@ -52,10 +52,10 @@ Adobe Acrobat Reader yerine kullanılmak üzere yazılmış PDF okuyucu ve düze
 - 3B PDF: pdf.js 3B göstermez. `find3D` /3D açıklamalarındaki U3D/PRC akışını bulur; uyarı şeridi ve
   dışa aktarma var, gerçek 3B görüntüleyici yok (JS'te hazır U3D/PRC çözücü yok).
 - `addMarkup` işlemi Underline/StrikeOut/Highlight açıklamalarını ekliyor.
-- Android imzalama: CI, `KATIP_KEYSTORE_B64` / `KATIP_KEYSTORE_PASSWORD` sırları varsa onlarla,
-  yoksa Actions önbelleğindeki `katip-android-signing-v1` anahtarıyla imzalıyor. Önbellek 7 gün
-  kullanılmazsa silinir → yeni APK eskinin üstüne kurulamaz, kaldırıp kurmak gerekir. Kalıcı çözüm
-  (anahtarı GitHub Secrets'a eklemek) Ömer'e önerildi, yapılmadı. Keystore'u repoya commit etme.
+- Android imzalama: anahtar 2026-11-20'de GitHub Secrets'a taşındı (`KATIP_KEYSTORE_B64`,
+  `KATIP_KEYSTORE_PASSWORD`); CI artık hep bununla imzalıyor. Sertifika SHA-256:
+  9B:DF:A1:01:...:CE:63. Yerel yedek: `%USERPROFILE%\.katip-imza-yedek\` (katip.jks + password).
+  Telefondaki 1.2.0 eski bir anahtarla imzalıydı, bir kez kaldırılıp 1.3.0 kuruldu. Keystore'u repoya commit etme.
 - Eski ortamda `gh pr` GraphQL komutları engelliydi, REST (`gh api`) kullanılıyordu; yerelde sorun olmayabilir.
 
 ## Çalışma tarzı
@@ -81,7 +81,7 @@ Adobe Acrobat Reader yerine kullanılmak üzere yazılmış PDF okuyucu ve düze
 - v1.2.1 yayında, Releases'te tüm exe'ler ve APK var. Açık PR yok, `main` temiz (son commit 321e2a7).
 - Ömer vurgu rengi hatasını bildirmişti, düzeltildi; düzeltmeyi kendisi denediğine dair geri bildirim yok.
 - Android sürümü gerçek telefonda hiç denenmedi (sadece tarayıcı emülasyonu, 13/13 test).
-- Açık konu: Android imza anahtarını kalıcı hale getirmek (GitHub Secrets). Bekleyen başka istek yok.
+- İmza anahtarı Secrets'ta (çözüldü). 1.3.0 Ömer'in telefonuna (Realme RMX3930, Android 16) ADB ile kuruldu.
 
 ## Kaynak
 
