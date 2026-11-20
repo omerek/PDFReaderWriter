@@ -50,6 +50,14 @@ Android sürümü masaüstüyle aynı özelliklere sahiptir; dokunmatik ekrana g
 - Tam ekran okuma modu, koyu tema, gece okuma modu (renkleri ters çevir)
 - Bağlantılar, belge özellikleri (başlık, yazar, konu, anahtar sözcük düzenleme)
 
+**Dönüştürme (Windows)**
+- **PDF → Word**: Dosya → PDF'yi Word'e Dönüştür. Metin, yazı boyutu, kalın/italik ve paragraflar
+  .docx dosyasına aktarılır. Metni olmayan (taranmış) sayfalar resim olarak eklenir.
+- **Word → PDF**: Dosya → Word'ü PDF'ye Dönüştür, ya da bir .docx dosyasını açın / pencereye
+  sürükleyin. Belge PDF'ye çevrilip açılır, Ctrl+S ile kaydedilir. Microsoft Word gerekmez.
+- **3B PDF**: İçinde 3B model (U3D/PRC) olan belgeler açılır ve uyarı şeridi gösterilir; sayfada
+  modelin önizleme resmi görünür. Model "3B Modeli Dışa Aktar" ile .u3d/.prc olarak kaydedilebilir.
+
 **Düzenleme ve açıklama**
 - **Orijinal metni düzenleme**: Düzenle aracıyla (E) sayfadaki mevcut yazıya tıklayıp
   değiştirin. Eski harfler PDF'ten gerçekten silinir, yeni metin benzer yazı tipi, boyut ve
@@ -154,6 +162,11 @@ olarak yazılır; Adobe Acrobat, tarayıcılar ve diğer okuyucularda da görün
   metin olmadığından düzenleme yapılamaz.
 - Şifreli PDF'lerde açıklama ve form doldurma çalışır; sayfa işlemleri (döndürme, silme vb.)
   için önce şifresiz bir kopya kaydedilmelidir.
+- 3B modeller sayfa içinde döndürülüp incelenemez (Adobe Reader'daki 3B görüntüleyici yok);
+  model dosyası dışa aktarılabilir.
+- PDF → Word dönüştürme metni ve paragrafları aktarır; tablolar sekmeli metin olur, sütunlu ve
+  karmaşık düzenler birebir korunmaz. Word → PDF yalnızca .docx destekler (eski .doc değil) ve
+  sayfa düzeni Word'deki ile birebir aynı olmayabilir (A4, yazı tipleri ve sayfa sonları yaklaşık).
 - Dijital (sertifikalı) imza desteklenmez; imza aracı görsel imza ekler.
 - Electron 43, 32 bit Windows'u destekleyen son sürümdür; ileride yalnızca x64 sürümü güncellenebilir.
 

@@ -319,6 +319,48 @@ const annotSubtypes = async (file) => {
   });
   await quit(app, win);
 
+  // ---- PDF <-> Word
+  ({ app, win } = await launch(copy('ornek.pdf')));
+  await step('PDF → Word: metin .docx içine aktarılır', async () => {
+    const docx = await win.evaluate(async () => {
+      const K = window.__katip;
+      const out = await K.convert.buildDocx(K.ctx, [0, 1]);
+      return Array.from(out.docx);
+    });
+    const { value } = await require('mammoth').extractRawText({ buffer: Buffer.from(docx) });
+    const pdfText = await win.evaluate(async () => {
+      const p = await window.__katip.state.pdfDoc.getPage(1);
+      return (await p.getTextContent()).items.map((i) => i.str).join(' ');
+    });
+    const words = pdfText.split(/\s+/).filter((w) => w.length > 3).slice(0, 8);
+    assert.ok(words.length > 2, pdfText);
+    for (const w of words) assert.ok(value.includes(w), `"${w}" yok:\n${value.slice(0, 400)}`);
+    fs.writeFileSync(path.join(tmp, 'ornek.docx'), Buffer.from(docx));
+  });
+  await step('Word → PDF: .docx açılınca PDF olarak gösterilir', async () => {
+    await win.evaluate(() => { window.__katip.state.dirty = false; });
+    await win.evaluate((p) => window.__katip.ctx.openPath(p), path.join(tmp, 'ornek.docx'));
+    await win.waitForFunction(() => window.__katip.state.fileName === 'ornek.pdf' && window.__katip.state.dirty && document.querySelector('.page canvas'), null, { timeout: 20000 });
+    const text = await win.evaluate(async () => {
+      const p = await window.__katip.state.pdfDoc.getPage(1);
+      return (await p.getTextContent()).items.map((i) => i.str).join(' ');
+    });
+    assert.ok(text.trim().length > 20, text);
+    await win.screenshot({ path: path.join(shots, 'e2e-word-to-pdf.png') });
+  });
+  await quit(app, win);
+
+  // ---- 3D PDF
+  ({ app, win } = await launch(copy('model3d.pdf')));
+  await step('3B PDF: uyarı gösterilir ve model dışa aktarılabilir', async () => {
+    await win.waitForSelector('#banner3d:not([hidden])', { timeout: 10000 });
+    const info = await win.evaluate(() => window.__katip.state.models3D);
+    assert.strictEqual(info.length, 1);
+    assert.strictEqual(info[0].format, 'U3D');
+    await win.screenshot({ path: path.join(shots, 'e2e-3d.png') });
+  });
+  await quit(app, win);
+
   // ---- welcome screen
   ({ app, win } = await launch(null));
   await step('Karşılama ekranı', async () => {

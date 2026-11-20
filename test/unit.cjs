@@ -124,6 +124,46 @@ async function t(name, fn) {
     }
   });
 
+  // ---- conversions
+  const convert = require('../src/main/convert');
+  const it = (str, x, y, extra = {}) => ({ str, x, y, w: str.length * 6, size: 12, font: 'ABCDEF+ArialMT', ...extra });
+  await t('pdfToDocx: lines, paragraphs, bold, Turkish text', async () => {
+    const lines = convert.buildLines([it('İkinci', 72, 680), it('Başlık', 72, 720, { size: 18, font: 'Arial-BoldMT' }), it('satır', 120, 680.4), it('ilk', 72, 694)]);
+    assert.deepStrictEqual(lines.map((l) => l.runs.map((r) => r.text).join('')), ['Başlık', 'ilk', 'İkinci satır']);
+    assert.strictEqual(lines[0].runs[0].b, true);
+    const paras = convert.buildParagraphs(lines, 595);
+    assert.strictEqual(paras.length, 3, JSON.stringify(paras.map((p) => p.runs.map((r) => r.text))));
+    const docx = convert.pdfToDocx({ pages: [{ width: 595, height: 842, items: [it('Başlık ŞĞİ', 72, 720, { size: 18, bold: true }), it('Gövde metni çğü', 72, 690)] }, { width: 595, height: 842, items: [it('Sayfa iki', 72, 720)] }] });
+    const { value } = await require('mammoth').convertToHtml({ buffer: Buffer.from(docx) });
+    assert.ok(value.includes('<strong>Başlık ŞĞİ</strong>') && value.includes('Gövde metni çğü') && value.includes('Sayfa iki'), value);
+  });
+  await t('pdfToDocx: long lines join into one paragraph, hyphen removed', async () => {
+    const long = (s) => s.padEnd(70, ' x');
+    const lines = convert.buildLines([it(`${long('Birinci uzun satır')} devam-`, 72, 700), it(long('ediyor ikinci satır'), 72, 686), it('Son.', 72, 672)]);
+    const paras = convert.buildParagraphs(lines, 595);
+    assert.strictEqual(paras.length, 1);
+    assert.ok(paras[0].runs[0].text.includes('devamediyor'), paras[0].runs[0].text);
+  });
+  await t('pdfToDocx: scanned page becomes an image', async () => {
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    const docx = convert.pdfToDocx({ pages: [{ width: 595, height: 842, items: [], image: png }] });
+    const { value } = await require('mammoth').convertToHtml({ buffer: Buffer.from(docx) });
+    assert.ok(/<img src="data:image\/png;base64,/.test(value), value);
+  });
+  await t('docxToHtml: rejects non-docx, converts docx', async () => {
+    await assert.rejects(convert.docxToHtml(new Uint8Array([1, 2, 3])), /docx/);
+    const docx = convert.pdfToDocx({ pages: [{ width: 595, height: 842, items: [it('Merhaba Dünya', 72, 720)] }] });
+    assert.ok((await convert.docxToHtml(docx)).includes('Merhaba Dünya'));
+  });
+  await t('find3D finds and decodes a U3D stream', async () => {
+    const found = await convert.find3D({ bytes: fx('model3d.pdf'), withData: true });
+    assert.strictEqual(found.length, 1);
+    assert.strictEqual(found[0].format, 'U3D');
+    assert.strictEqual(found[0].page, 0);
+    assert.ok(Buffer.from(found[0].data).toString('latin1').startsWith('U3D\0'));
+    assert.deepStrictEqual(await convert.find3D({ bytes: doc }), []);
+  });
+
   console.log(failed ? `\n${failed} test başarısız` : '\nTüm birim testleri başarılı');
   process.exit(failed ? 1 : 0);
 })();

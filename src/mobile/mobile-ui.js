@@ -277,12 +277,37 @@ export function startMobileUI(api) {
   let pinch = null;
   const dist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
   const mid = (a, b) => [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2];
+  // Touch events keep going to the element first touched even after it leaves the DOM (pdf.js
+  // re-renders text layer spans while zooming), so they would stop bubbling to the container.
+  // The gesture handlers are therefore also attached to the touched elements themselves.
+  const handled = new WeakSet();
+  let pinchTargets = [];
+  const detachTargets = () => {
+    pinchTargets.forEach((t) => {
+      t.removeEventListener('touchmove', onPinchMove);
+      t.removeEventListener('touchend', onPinchEnd);
+      t.removeEventListener('touchcancel', onPinchEnd);
+    });
+    pinchTargets = [];
+  };
   container.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 2 || !state.pdfDoc) return;
     const [a, b] = e.touches;
     pinch = { d: dist(a, b), m: mid(a, b), scale: pdfViewer.currentScale };
+    detachTargets();
+    pinchTargets = [...new Set([a.target, b.target])].filter((t) => t && t !== container);
+    pinchTargets.forEach((t) => {
+      t.addEventListener('touchmove', onPinchMove, { passive: false });
+      t.addEventListener('touchend', onPinchEnd);
+      t.addEventListener('touchcancel', onPinchEnd);
+    });
   }, { passive: true });
-  container.addEventListener('touchmove', (e) => {
+  function onPinchEnd(e) {
+    if (e.type === 'touchcancel' || e.touches.length < 2) { pinch = null; detachTargets(); }
+  }
+  function onPinchMove(e) {
+    if (handled.has(e)) return;
+    handled.add(e);
     if (!pinch || e.touches.length !== 2) return;
     e.preventDefault();
     const [a, b] = e.touches;
@@ -293,9 +318,10 @@ export function startMobileUI(api) {
     pinch.m = m;
     if (Math.abs(factor - 1) < 0.01 && !pan[0] && !pan[1]) return;
     pdfViewer.updateScale({ drawingDelay: 300, scaleFactor: Math.abs(factor - 1) < 0.01 ? 1 : factor, origin: m, pan });
-  }, { passive: false });
-  container.addEventListener('touchend', (e) => { if (e.touches.length < 2) pinch = null; });
-  container.addEventListener('touchcancel', () => { pinch = null; });
+  }
+  container.addEventListener('touchmove', onPinchMove, { passive: false });
+  container.addEventListener('touchend', (e) => { if (e.touches.length < 2) { pinch = null; detachTargets(); } });
+  container.addEventListener('touchcancel', () => { pinch = null; detachTargets(); });
 
   // Double tap: toggle between fit-to-width and 2x around the tap point.
   let lastTap = 0;
