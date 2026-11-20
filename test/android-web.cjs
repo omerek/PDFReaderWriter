@@ -164,8 +164,11 @@ async function step(name, fn) {
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [pt(150, 400, 0), pt(250, 400, 1)] });
     for (let i = 1; i <= 6; i++) {
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [pt(150 - i * 15, 400, 0), pt(250 + i * 15, 400, 1)] });
+      // Real fingers move at ~60 Hz; newer Chrome coalesces back-to-back synthetic moves.
+      await page.waitForTimeout(40);
     }
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(50);
     const after = await K(() => window.__katip.pdfViewer.currentScale);
     assert.ok(after > before * 1.5, `${before} -> ${after}`);
   });
