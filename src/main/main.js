@@ -4,7 +4,9 @@ const { app, BrowserWindow, ipcMain, dialog, Menu, shell, nativeTheme, protocol,
 const path = require('path');
 const { pathToFileURL } = require('url');
 const fs = require('fs/promises');
+const os = require('os');
 const pdfops = require('./pdfops');
+const convert = require('./convert');
 const { buildMenu } = require('./menu');
 const settings = require('./settings');
 
@@ -153,7 +155,7 @@ ipcMain.handle('file:open-dialog', async (e, opts = {}) => {
   const res = await dialog.showOpenDialog(win, {
     title: opts.title || 'PDF Aç',
     properties: opts.multi ? ['openFile', 'multiSelections'] : ['openFile'],
-    filters: opts.filters || [{ name: 'PDF Belgeleri', extensions: ['pdf'] }, { name: 'Tüm Dosyalar', extensions: ['*'] }],
+    filters: opts.filters || [{ name: 'PDF Belgeleri', extensions: ['pdf'] }, { name: "Word Belgeleri (PDF'ye dönüştürülür)", extensions: ['docx'] }, { name: 'Tüm Dosyalar', extensions: ['*'] }],
   });
   return res.canceled ? [] : res.filePaths;
 });
@@ -197,6 +199,35 @@ ipcMain.handle('file:write', async (e, filePath, data) => {
 ipcMain.handle('file:show-in-folder', (e, filePath) => shell.showItemInFolder(filePath));
 
 ipcMain.handle('pdf:op', async (e, op, args) => pdfops.run(op, args));
+
+// ---------- conversions ----------
+ipcMain.handle('convert:pdf-to-docx', async (e, data) => {
+  try { return convert.pdfToDocx(data); } catch (err) { throw new Error(err.message); }
+});
+
+// Word -> PDF: mammoth turns the .docx into HTML, a hidden window prints it to PDF.
+ipcMain.handle('convert:docx-to-pdf', async (e, bytes) => {
+  const html = await convert.docxToHtml(bytes);
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'katip-docx-'));
+  const htmlPath = path.join(dir, 'belge.html');
+  await fs.writeFile(htmlPath, html, 'utf8');
+  const win = new BrowserWindow({
+    show: false,
+    webPreferences: { javascript: false, sandbox: true, contextIsolation: true, nodeIntegration: false, spellcheck: false },
+  });
+  try {
+    await win.loadFile(htmlPath);
+    const pdf = await win.webContents.printToPDF({ pageSize: 'A4', printBackground: true, preferCSSPageSize: true });
+    return new Uint8Array(pdf.buffer, pdf.byteOffset, pdf.byteLength);
+  } finally {
+    win.destroy();
+    fs.rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+});
+
+ipcMain.handle('pdf:find3d', async (e, bytes, withData) => {
+  try { return await convert.find3D({ bytes, withData }); } catch { return []; }
+});
 
 ipcMain.handle('app:confirm', async (e, opts) => {
   const win = BrowserWindow.fromWebContents(e.sender);

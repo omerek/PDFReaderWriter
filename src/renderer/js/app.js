@@ -9,6 +9,7 @@ import { openSignatureDialog } from './signature.js';
 import { initTextEdit } from './textedit-ui.js';
 import { initContextMenu } from './contextmenu.js';
 import * as dialogs from './dialogs.js';
+import * as convert from './convert.js';
 
 const PDFJS = new URL('../../../node_modules/pdfjs-dist/', import.meta.url).href;
 const pdfjsLib = await import(`${PDFJS}build/pdf.mjs`);
@@ -124,7 +125,7 @@ scriptingManager?.setViewer(pdfViewer);
 const ctx = {
   api, state, pdfjsLib, pdfViewer, eventBus, linkService,
   getCurrentBytes, applyOp, loadBytes, openPath, setDirty, saveBytesAs, goToPage,
-  renderPageToCanvas, docBaseName, refreshAfterLoad: () => {},
+  renderPageToCanvas, docBaseName, confirmDiscard: () => confirmDiscard(), refreshAfterLoad: () => {},
 };
 
 const sidebar = initSidebar(ctx);
@@ -134,6 +135,7 @@ ctx.textEdit = initTextEdit(ctx);
 
 // ---------------------------------------------------------------- loading
 async function openPath(filePath) {
+  if (/\.docx$/i.test(filePath) && convert.canConvert(api)) return convert.wordToPdf(ctx, filePath);
   if (!(await confirmDiscard())) return;
   try {
     const { data, size } = await busy('Açılıyor…', () => api.readFile(filePath));
@@ -213,6 +215,7 @@ async function loadBytes(data, { filePath, fileName, fileSize, fresh = false, un
   sidebar.onDocument(doc);
   $('#pageCount').textContent = `/ ${doc.numPages}`;
   if (state.tool !== 'select' && state.tool !== 'hand') setTool('select');
+  if (fresh) convert.check3D(ctx, data);
 }
 
 eventBus.on('pagesinit', () => {
@@ -436,6 +439,7 @@ async function closeDocument() {
   linkService.setDocument(null, null);
   old?.loadingTask.destroy().catch(() => {});
   sidebar.onDocument(null);
+  $('#banner3d').hidden = true;
   document.body.classList.add('no-doc');
   $('#toolOptions').hidden = true;
   updateTitle();
@@ -879,6 +883,9 @@ const commands = {
   split: () => state.pdfDoc && dialogs.split(ctx),
   imagesToPdf: () => dialogs.imagesToPdf(ctx),
   exportImages: () => state.pdfDoc && dialogs.exportImages(ctx),
+  pdfToWord: () => convert.pdfToWord(ctx),
+  wordToPdf: () => convert.wordToPdf(ctx),
+  export3D: () => convert.export3D(ctx),
   undo: () => undo(),
   redo: () => redo(),
   find: () => openFind(),
@@ -997,6 +1004,9 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+$('#banner3dExport')?.addEventListener('click', () => convert.export3D(ctx));
+$('#banner3dClose')?.addEventListener('click', () => { $('#banner3d').hidden = true; });
+
 // ---------------------------------------------------------------- drag & drop
 let dragDepth = 0;
 window.addEventListener('dragenter', (e) => {
@@ -1015,7 +1025,7 @@ window.addEventListener('drop', async (e) => {
   if (!e.dataTransfer?.files.length) return;
   e.preventDefault();
   const files = [...e.dataTransfer.files];
-  const pdfs = files.filter((f) => /\.pdf$/i.test(f.name));
+  const pdfs = files.filter((f) => /\.pdf$/i.test(f.name) || (convert.canConvert(api) && /\.docx$/i.test(f.name)));
   const images = files.filter((f) => /^image\//.test(f.type));
   if (pdfs.length) {
     await openPath(api.pathForFile(pdfs[0]));
@@ -1043,7 +1053,7 @@ async function renderRecent() {
 // ---------------------------------------------------------------- startup
 window.__katipIsEmpty = () => !state.pdfDoc;
 // Hooks for the automated end-to-end tests.
-window.__katip = { state, pdfViewer, eventBus, commands, setTool, loadBytes, getCurrentBytes, applyOp, insertImageFile, renderPageToCanvas, ctx };
+window.__katip = { convert, state, pdfViewer, eventBus, commands, setTool, loadBytes, getCurrentBytes, applyOp, insertImageFile, renderPageToCanvas, ctx };
 
 async function init() {
   const saved = await api.getSetting('prefs', null);
